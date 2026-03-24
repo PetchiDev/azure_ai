@@ -1,31 +1,33 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 import 'react-native-reanimated';
-
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AppNavigator, linking } from '../src/routes/AppNavigator';
 import { useColorScheme } from '@/components/useColorScheme';
+import { NavigationContainer, NavigationIndependentTree } from '@react-navigation/native';
+import { useAuthStore } from '../src/store/useStore';
+
+WebBrowser.maybeCompleteAuthSession();
+
+const queryClient = new QueryClient();
 
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
 } from 'expo-router';
 
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
-};
-
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    SpaceMono: require('../src/assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
     if (error) throw error;
   }, [error]);
@@ -36,11 +38,34 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
+  // Global: Parse Microsoft redirect token from URL hash before rendering
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash;
+    if (!hash || !hash.includes('access_token')) return;
+    const params = new URLSearchParams(hash.replace('#', '?'));
+    const token = params.get('access_token');
+    if (token) {
+      useAuthStore.getState().setCredentials({
+        tenantId: process.env.EXPO_PUBLIC_AZURE_TENANT_ID || '',
+        clientId: process.env.EXPO_PUBLIC_AZURE_CLIENT_ID || '',
+        subscriptionId: process.env.EXPO_PUBLIC_AZURE_SUBSCRIPTION_ID || '',
+        accessToken: token,
+      });
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
+
   if (!loaded) {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RootLayoutNav />
+    </QueryClientProvider>
+  );
 }
 
 function RootLayoutNav() {
@@ -48,10 +73,11 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
+      <NavigationIndependentTree>
+        <NavigationContainer linking={linking}>
+          <AppNavigator />
+        </NavigationContainer>
+      </NavigationIndependentTree>
     </ThemeProvider>
   );
 }
