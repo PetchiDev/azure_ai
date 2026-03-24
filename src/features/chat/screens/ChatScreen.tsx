@@ -12,9 +12,9 @@ import {
   Animated as RNAnimated,
 } from 'react-native';
 import { THEME } from '../../../constants/theme';
-import { ChatMessage } from '../types/chat.types';
+import { ChatMessage, ConversationContext } from '../types/chat.types';
 import { parseIntent } from '../services/chatIntentParser';
-import { executeIntent } from '../services/chatAzureExecutor';
+import { executeIntent, continueCreation } from '../services/chatAzureExecutor';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Send, Bot, User, ChevronRight } from 'lucide-react-native';
 
@@ -127,6 +127,8 @@ export const ChatScreen = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // Track multi-step guided creation state
+  const [conversationContext, setConversationContext] = useState<ConversationContext | null>(null);
   const listRef = useRef<FlatList>(null);
 
   const scrollToBottom = useCallback(() => {
@@ -149,8 +151,18 @@ export const ChatScreen = () => {
     scrollToBottom();
 
     try {
-      const intent = parseIntent(text.trim());
-      const result = await executeIntent(intent);
+      let result;
+
+      if (conversationContext) {
+        // We're in the middle of a guided creation — pipe the answer through
+        result = await continueCreation(conversationContext, text.trim());
+      } else {
+        const intent = parseIntent(text.trim());
+        result = await executeIntent(intent);
+      }
+
+      // Update context for next turn
+      setConversationContext(result.nextContext ?? null);
 
       const botMsg: ChatMessage = {
         id: generateId(),
@@ -161,6 +173,7 @@ export const ChatScreen = () => {
       };
       setMessages(prev => [...prev, botMsg]);
     } catch (err: any) {
+      setConversationContext(null);
       setMessages(prev => [...prev, {
         id: generateId(),
         role: 'error',
@@ -171,7 +184,7 @@ export const ChatScreen = () => {
       setIsLoading(false);
       scrollToBottom();
     }
-  }, [isLoading, scrollToBottom]);
+  }, [isLoading, scrollToBottom, conversationContext]);
 
   return (
     <View style={styles.root}>
