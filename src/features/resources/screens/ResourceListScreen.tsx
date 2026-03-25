@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import { THEME } from '../../../constants/theme';
-import { KineticCard } from '../../../components/ui/KineticCard';
+import { THEME } from '@/constants/theme';
+import { KineticCard } from '@/components/ui/KineticCard';
 import { Box, Layers, Database, Cpu, Plus, Pencil, Trash2, RefreshCcw } from 'lucide-react-native';
 import { ResourceFormSheet } from '../components/ResourceFormSheet';
-import { DeleteConfirmationModal } from '../../../components/common/DeleteConfirmationModal';
-import { useResources, useDeleteResource } from '../../../hooks/useAzure';
+import { DeleteConfirmationModal } from '@/components/common/DeleteConfirmationModal';
+import { useResources, useDeleteResource } from '@/hooks/useAzure';
+
 
 const ICON_SIZE = 20;
 

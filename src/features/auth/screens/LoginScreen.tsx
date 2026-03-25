@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { THEME } from '../../../constants/theme';
 import { KineticInput } from '../../../components/ui/KineticInput';
 import { KineticButton } from '../../../components/ui/KineticButton';
-import { useAuthStore } from '../../../store/useStore';
+import { useAuthStore } from '../../../store/useAuthStore';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as AuthSession from 'expo-auth-session';
-import { authConfig, discovery } from '../services/authService';
+import * as msalService from '../../../services/msalService';
 import axios from 'axios';
+import { useRouter } from 'expo-router';
+import { Platform } from 'react-native';
+
+import * as AuthSession from 'expo-auth-session';
 
 export const LoginScreen = () => {
+  const router = useRouter();
   const [tenantId, setTenantId] = useState(process.env.EXPO_PUBLIC_AZURE_TENANT_ID || '');
   const [clientId, setClientId] = useState(process.env.EXPO_PUBLIC_AZURE_CLIENT_ID || '');
   const [clientSecret, setClientSecret] = useState('');
@@ -19,65 +23,87 @@ export const LoginScreen = () => {
 
   const setCredentials = useAuthStore((state) => state.setCredentials);
 
-  // Microsoft Interactive Login Hook
+  const redirectUri = AuthSession.makeRedirectUri({
+    scheme: 'app',
+  });
+
+  useEffect(() => {
+    console.log('Detected Redirect URI:', redirectUri);
+  }, []);
+
+  // Web Auth Request
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
-      ...authConfig,
       clientId: clientId || process.env.EXPO_PUBLIC_AZURE_CLIENT_ID!,
+      scopes: ['https://management.azure.com/user_impersonation', 'offline_access', 'openid', 'profile'],
+      redirectUri: AuthSession.makeRedirectUri({
+        scheme: 'app',
+      }),
+      responseType: AuthSession.ResponseType.Token,
     },
-    discovery
+    { authorizationEndpoint: `https://login.microsoftonline.com/${tenantId || 'common'}/oauth2/v2.0/authorize` }
   );
 
-  // Parse token from URL hash on page load (handles redirect-based web login return)
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (typeof window === 'undefined') return;
-
-    const hash = window.location.hash;
-    if (!hash || !hash.includes('access_token')) return;
-
-    const params = new URLSearchParams(hash.replace('#', '?'));
-    const token = params.get('access_token');
-    if (token) {
-      setCredentials({
-        tenantId: tenantId || process.env.EXPO_PUBLIC_AZURE_TENANT_ID!,
-        clientId: clientId || process.env.EXPO_PUBLIC_AZURE_CLIENT_ID!,
-        subscriptionId: subscriptionId || process.env.EXPO_PUBLIC_AZURE_SUBSCRIPTION_ID || '',
-        accessToken: token,
-      });
-      // Clean the URL after consuming the token
-      window.history.replaceState(null, '', window.location.pathname);
+    console.log('Auth Response Type:', response?.type);
+    if (response?.type === 'success') {
+      console.log('Auth Params:', Object.keys(response.params));
+      const { access_token } = response.params;
+      if (access_token) {
+        setCredentials({
+          tenantId: tenantId || process.env.EXPO_PUBLIC_AZURE_TENANT_ID!,
+          clientId: clientId || process.env.EXPO_PUBLIC_AZURE_CLIENT_ID!,
+          subscriptionId: subscriptionId || process.env.EXPO_PUBLIC_AZURE_SUBSCRIPTION_ID || '',
+          accessToken: access_token,
+          user: { name: 'Azure Web User', email: 'web@azure.com' }
+        });
+        console.log('Login successful, navigating...');
+        router.replace('/dashboard' as any);
+      } else {
+        console.error('No access token in response params');
+        setError('No access token received. Check Azure App Registration Implicit Flow settings.');
+      }
+    } else if (response?.type === 'error') {
+      console.error('Auth Error:', response.error);
+      setError(response.error?.message || 'Authentication error');
     }
-  }, []);
+  }, [response]);
+
 
   const handleMicrosoftSignIn = async () => {
     setLoading(true);
     setError(null);
     try {
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        // Web: Use redirect flow to avoid Cross-Origin-Opener-Policy popup issues
-        const effectiveTenantId = tenantId || process.env.EXPO_PUBLIC_AZURE_TENANT_ID!;
-        const effectiveClientId = clientId || process.env.EXPO_PUBLIC_AZURE_CLIENT_ID!;
-        const redirectUri = process.env.EXPO_PUBLIC_AZURE_REDIRECT_URI || window.location.origin + '/';
-        const scope = encodeURIComponent('https://management.azure.com/user_impersonation openid profile offline_access');
-        const authUrl = `https://login.microsoftonline.com/${effectiveTenantId}/oauth2/v2.0/authorize?client_id=${effectiveClientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_mode=fragment`;
-        window.location.href = authUrl;
-        return; // Loading state stays true as browser redirects
-      }
-      // Native: use expo-auth-session popup (works fine on mobile)
-      const result = await promptAsync();
-      if (result?.type === 'cancel') {
-        setLoading(false);
+      if (Platform.OS === 'web') {
+        await promptAsync();
+      } else {
+        const result = await msalService.signInInteractive();
+        if (result.accessToken) {
+          await setCredentials({
+            tenantId: tenantId || process.env.EXPO_PUBLIC_AZURE_TENANT_ID!,
+            clientId: clientId || process.env.EXPO_PUBLIC_AZURE_CLIENT_ID!,
+            subscriptionId: subscriptionId || process.env.EXPO_PUBLIC_AZURE_SUBSCRIPTION_ID || '',
+            accessToken: result.accessToken,
+            user: {
+              name: result.account.name || '',
+              email: result.account.username || '',
+            }
+          });
+          router.replace('/dashboard' as any);
+        }
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication flow failed');
+      console.error('MSAL Login Error:', err);
+      setError(err.message || 'Authentication failed');
+    } finally {
       setLoading(false);
     }
   };
 
+
   const handleServicePrincipalSignIn = async () => {
     if (!tenantId || !clientId || !clientSecret || !subscriptionId) {
-      setError('Please fill all fields (Tenant, Client ID, Secret, Subscription)');
+      setError('Required: Tenant, Client ID, Secret, and Subscription');
       return;
     }
 
@@ -86,27 +112,31 @@ export const LoginScreen = () => {
 
     try {
       const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
-      const data = new URLSearchParams();
-      data.append('grant_type', 'client_credentials');
-      data.append('client_id', clientId);
-      data.append('client_secret', clientSecret);
-      data.append('scope', 'https://management.azure.com/.default');
+      const params = new URLSearchParams();
+      params.append('grant_type', 'client_credentials');
+      params.append('client_id', clientId);
+      params.append('client_secret', clientSecret);
+      params.append('scope', 'https://management.azure.com/.default');
 
-      const res = await axios.post(tokenUrl, data, {
+      const res = await axios.post(tokenUrl, params.toString(), {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
 
       if (res.data.access_token) {
-        setCredentials({
+        await setCredentials({
           tenantId,
           clientId,
           subscriptionId,
           accessToken: res.data.access_token,
+          user: {
+            name: 'Service Principal',
+            email: clientId,
+          }
         });
+        router.replace('/dashboard' as any);
       }
     } catch (err: any) {
-      console.error('Manual login failed:', err.response?.data || err.message);
-      setError('Invalid credentials or secret. Please check Azure Portal.');
+      setError('Invalid credentials. Check Azure Portal.');
     } finally {
       setLoading(false);
     }
@@ -119,27 +149,34 @@ export const LoginScreen = () => {
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <Text style={styles.brand}>KINETIC VAULT</Text>
-          <Text style={styles.title}>Enterprise Cloud & AI Optimization</Text>
+          <Text style={styles.brand}>AZURE RESOURCES MOBILE</Text>
+          <Text style={styles.title}>Manage Infrastructure Anywhere</Text>
           <Text style={styles.subtitle}>
-            Sign in with Microsoft or use a Service Principal for developer environments.
+            Authenticate with Azure AD or use a Service Principal.
           </Text>
         </View>
       </LinearGradient>
 
       <View style={styles.formContainer}>
-        <Text style={styles.formTitle}>Sign In</Text>
+        <Text style={styles.formTitle}>Azure Authentication</Text>
         
         <KineticButton
-          title={loading ? "Redirecting..." : "Sign In with Microsoft"}
+          title={loading ? "Authenticating..." : "Sign In with Microsoft"}
           onPress={handleMicrosoftSignIn}
           style={styles.microsoftButton}
-          disabled={loading || !request}
+          disabled={loading || (Platform.OS === 'web' && !request)}
         />
+        {Platform.OS === 'web' && (
+          <Text style={styles.webWarning}>
+            * Using Web Redirect Flow
+          </Text>
+        )}
+
+
 
         <View style={styles.separatorContainer}>
           <View style={styles.line} />
-          <Text style={styles.orText}>OR SERVICE PRINCIPAL (DEVELOPER)</Text>
+          <Text style={styles.orText}>OR SERVICE PRINCIPAL</Text>
           <View style={styles.line} />
         </View>
 
@@ -159,7 +196,7 @@ export const LoginScreen = () => {
         />
         <KineticInput
           label="Client Secret"
-          placeholder="Ex: _XyZ~123..."
+          placeholder="Enter secret"
           secureTextEntry
           value={clientSecret}
           onChangeText={setClientSecret}
@@ -172,7 +209,7 @@ export const LoginScreen = () => {
         />
 
         <KineticButton
-          title="Manual Vault Access"
+          title="Login with Principal"
           onPress={handleServicePrincipalSignIn}
           style={styles.submitButton}
           variant="outline"
@@ -181,7 +218,7 @@ export const LoginScreen = () => {
 
         <View style={styles.footer}>
           <TouchableOpacity>
-            <Text style={styles.footerLink}>Security Architecture & Support</Text>
+            <Text style={styles.footerLink}>Need help with Azure Auth?</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -275,4 +312,13 @@ const styles = StyleSheet.create({
     ...THEME.typography.label,
     color: THEME.colors.primary,
   },
+  webWarning: {
+    color: THEME.colors.onSurfaceVariant,
+    fontSize: 10,
+    textAlign: 'center',
+    marginBottom: THEME.spacing.md,
+    fontStyle: 'italic',
+  },
 });
+
+

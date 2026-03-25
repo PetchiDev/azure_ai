@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { X, Plus, Info, ChevronDown } from 'lucide-react-native';
-import { THEME } from '../../../constants/theme';
-import { GlassContainer } from '../../../components/common/GlassContainer';
-import { KineticButton } from '../../../components/ui/KineticButton';
-import { KineticInput } from '../../../components/ui/KineticInput';
-import { useCreateResource } from '../../../hooks/useAzure';
+import { THEME } from '@/constants/theme';
+import { GlassContainer } from '@/components/common/GlassContainer';
+import { KineticButton } from '@/components/ui/KineticButton';
+import { KineticInput } from '@/components/ui/KineticInput';
+import { useCreateResource } from '@/hooks/useAzure';
+
 
 interface Tag {
   key: string;
@@ -287,7 +288,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: THEME.colors.outlineVariant + '1A',
+    borderBottomColor: '#FFFFFF1A',
     backgroundColor: THEME.colors.surface,
   },
   title: {
@@ -338,7 +339,7 @@ const styles = StyleSheet.create({
     padding: THEME.spacing.md,
     borderRadius: THEME.borderRadius.md,
     borderWidth: 1,
-    borderColor: THEME.colors.outlineVariant + '33',
+    borderColor: '#FFFFFF33',
   },
   typeSelectorText: {
     ...THEME.typography.body,
@@ -351,12 +352,12 @@ const styles = StyleSheet.create({
     borderRadius: THEME.borderRadius.md,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: THEME.colors.outlineVariant + '33',
+    borderColor: '#FFFFFF33',
   },
   typeOption: {
     padding: THEME.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: THEME.colors.outlineVariant + '1A',
+    borderBottomColor: '#FFFFFF1A',
   },
   typeOptionText: {
     ...THEME.typography.body,
@@ -407,7 +408,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: THEME.borderRadius.lg,
     borderWidth: 1,
-    borderColor: THEME.colors.outlineVariant + '33',
+    borderColor: '#FFFFFF33',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -444,7 +445,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     borderWidth: 1,
-    borderColor: THEME.colors.outlineVariant + '33',
+    borderColor: '#FFFFFF33',
   },
   tagValueContainer: {
     flexDirection: 'row',
@@ -457,7 +458,7 @@ const styles = StyleSheet.create({
   footer: {
     padding: THEME.spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: THEME.colors.outlineVariant + '1A',
+    borderTopColor: '#FFFFFF1A',
     backgroundColor: THEME.colors.surface,
     flexDirection: 'row',
     alignItems: 'center',

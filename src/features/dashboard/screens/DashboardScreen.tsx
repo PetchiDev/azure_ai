@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, RefreshControl, ActivityIndicator } from 'react-native';
 import { LayoutDashboard, TrendingUp, AlertTriangle, Database, Terminal, AppWindow, ArrowRight } from 'lucide-react-native';
-import { THEME } from '../../../constants/theme';
-import { KineticCard } from '../../../components/ui/KineticCard';
-import { KineticButton } from '../../../components/ui/KineticButton';
-import { ResourceFormSheet } from '../../resources/components/ResourceFormSheet';
-import { useResources, useBilling, useActivities } from '../../../hooks/useAzure';
+import { THEME } from '@/constants/theme';
+import { KineticCard } from '@/components/ui/KineticCard';
+import { KineticButton } from '@/components/ui/KineticButton';
+import { ResourceFormSheet } from '@/features/resources/components/ResourceFormSheet';
+import { useResources, useBilling, useActivities } from '@/hooks/useAzure';
+
 
 const { width } = Dimensions.get('window');
 
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
     top: THEME.spacing.md + 16,
     bottom: THEME.spacing.md + 16,
     width: 1,
-    backgroundColor: THEME.colors.outlineVariant + '33',
+    backgroundColor: '#FFFFFF33',
   },
   activityItem: {
     flexDirection: 'row',

@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.colors.surfaceContainer,
     borderRadius: THEME.borderRadius.xl,
     borderWidth: 1,
-    borderColor: THEME.colors.outlineVariant + '33',
+    borderColor: '#FFFFFF33',
     overflow: 'hidden',
   },
   header: {

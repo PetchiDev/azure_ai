@@ -1,13 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import * as azureService from '../features/resources/services/azureService';
-import { useAuthStore } from '../store/useStore';
-
-const QUERY_KEYS = {
-  RESOURCES: 'azure_resources',
-  BILLING: 'azure_billing',
-  ACTIVITIES: 'azure_activities',
-  SUBSCRIPTIONS: 'azure_subscriptions',
-};
+import * as azureService from '@/api/services/azureService';
+import { useAuthStore } from '@/store/useAuthStore';
+import { QUERY_KEYS } from '@/constants/queryKeys';
 
 export const useSubscriptions = () => {
   return useQuery({
@@ -25,7 +19,7 @@ export const useResources = () => {
       id: res.id,
       name: res.name || res.displayName,
       type: res.type.split('/').pop().toLowerCase(),
-      status: 'Healthy', // Real status would require individual GETs
+      status: 'Healthy',
       location: res.location,
     })),
   });
@@ -50,8 +44,7 @@ export const useCreateResource = () => {
   return useMutation({
     mutationFn: ({ type, data }: { type: string; data: any }) => {
       if (type === 'apps') return azureService.createAppRegistration(data);
-      // For blobs/functions, we'd need more specific service calls
-      return Promise.reject('Creation for this type not yet fully implemented for real API');
+      return Promise.reject('Creation for this type not yet fully implemented');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.RESOURCES] });

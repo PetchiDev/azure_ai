@@ -2,22 +2,20 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { LinkingOptions } from '@react-navigation/native';
-import { THEME } from '../constants/theme';
-import { LoginScreen } from '../features/auth/screens/LoginScreen';
-import { DashboardScreen } from '../features/dashboard/screens/DashboardScreen';
-import { ResourceListScreen } from '../features/resources/screens/ResourceListScreen';
-import { AIOptimizationScreen } from '../features/ai/screens/AIOptimizationScreen';
-import { ChatScreen } from '../features/chat/screens/ChatScreen';
-import { useAuthStore } from '../store/useStore';
+import { THEME } from '@/constants/theme';
+import { LoginScreen } from '@/features/auth/screens/LoginScreen';
+import { DashboardScreen } from '@/features/dashboard/screens/DashboardScreen';
+import { ResourceListScreen } from '@/features/resources/screens/ResourceListScreen';
+import { AIOptimizationScreen } from '@/features/ai/screens/AIOptimizationScreen';
+import { ChatScreen } from '@/features/chat/screens/ChatScreen';
+import { useAuthStore } from '@/store/useAuthStore';
 import { LayoutDashboard, Layers, Sparkles, MessageCircle } from 'lucide-react-native';
-
-import * as AuthSession from 'expo-auth-session';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
 export const linking: LinkingOptions<any> = {
-  prefixes: [AuthSession.makeRedirectUri()],
+  prefixes: ['app://', 'http://localhost:8081', 'http://localhost:8084'],
   config: {
     screens: {
       Login: 'login',

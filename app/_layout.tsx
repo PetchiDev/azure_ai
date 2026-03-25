@@ -1,3 +1,4 @@
+import '@/styles/global.css';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -9,7 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppNavigator, linking } from '../src/routes/AppNavigator';
 import { useColorScheme } from '@/components/useColorScheme';
 import { NavigationContainer, NavigationIndependentTree } from '@react-navigation/native';
-import { useAuthStore } from '../src/store/useStore';
+import { useAuthStore } from '@/store/useAuthStore';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -52,10 +53,12 @@ export default function RootLayout() {
         clientId: process.env.EXPO_PUBLIC_AZURE_CLIENT_ID || '',
         subscriptionId: process.env.EXPO_PUBLIC_AZURE_SUBSCRIPTION_ID || '',
         accessToken: token,
+        user: { name: 'Azure User', email: 'azure@enterprise.com' }
       });
       window.history.replaceState(null, '', window.location.pathname);
     }
   }, []);
+
 
   if (!loaded) {
     return null;

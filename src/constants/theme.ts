@@ -1,64 +1,101 @@
+export const COLORS = {
+  primary: '#0078D4',
+  secondary: '#6366F1',
+  tertiary: '#22C55E',
+  primaryGradient: ['#0078D4', '#6366F1'],
+  kineticGradient: ['#0078D4', '#6366F1'],
+  background: '#0A0A0F',
+  surface: '#12121A',
+  card: '#1A1A2E',
+  border: 'rgba(255, 255, 255, 0.08)',
+  text: {
+    primary: '#F0F4FF',
+    secondary: '#8892A4',
+  },
+  status: {
+    success: '#22C55E',
+    warning: '#F59E0B',
+    danger: '#EF4444',
+  },
+  glass: {
+    bg: 'rgba(255, 255, 255, 0.05)',
+    border: 'rgba(255, 255, 255, 0.1)',
+  },
+  // Compatibility mappings for existing code
+  onSurface: '#F0F4FF',
+  onSurfaceVariant: '#8892A4',
+  onPrimary: '#FFFFFF',
+  outlineVariant: 'rgba(255, 255, 255, 0.1)',
+  primaryContainer: '#1A1A2E',
+  surfaceContainerHighest: '#1A1A2E',
+  surfaceContainerHigh: '#12121A',
+  surfaceContainer: '#0F0F16',
+  surfaceContainerLow: '#0A0A0F',
+  surfaceContainerLowest: '#050508',
+  error: '#EF4444',
+} as const;
+
+export const SPACING = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+} as const;
+
+export const BORDER_RADIUS = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  full: 9999,
+} as const;
+
+export const TYPOGRAPHY = {
+  fontFamily: 'Inter-Regular',
+  display: {
+    fontSize: 32,
+    fontFamily: 'Inter-Black',
+  },
+  heading: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+  },
+  body: {
+    fontSize: 15,
+    fontFamily: 'Inter-Regular',
+  },
+  caption: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
+  mono: {
+    fontFamily: 'JetBrainsMono-Regular',
+  },
+  // Compatibility mappings
+  h1: {
+    fontSize: 32,
+    fontFamily: 'Inter-Black',
+  },
+  h2: {
+    fontSize: 24,
+    fontFamily: 'Inter-Bold',
+  },
+  label: {
+
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
+} as const;
+
 export const THEME = {
-  colors: {
-    surface: "#101419",
-    surfaceContainerLowest: "#0b0e14",
-    surfaceContainerLow: "#181c22",
-    surfaceContainer: "#1c2026",
-    surfaceContainerHigh: "#272a30",
-    surfaceContainerHighest: "#31353b",
-    surfaceBright: "#363940",
-    surfaceDim: "#101419",
-    
-    primary: "#a3c9ff",
-    primaryContainer: "#0078d4",
-    onPrimary: "#00315c",
-    onPrimaryContainer: "#ffffff",
-    
-    secondary: "#adc8f2",
-    secondaryContainer: "#2d486b",
-    onSecondary: "#143153",
-    onSecondaryContainer: "#9cb7df",
-    
-    tertiary: "#ffb689",
-    tertiaryContainer: "#bc5b00",
-    onTertiary: "#512300",
-    onTertiaryContainer: "#ffffff",
-    
-    error: "#ffb4ab",
-    errorContainer: "#93000a",
-    onError: "#690005",
-    onErrorContainer: "#ffdad6",
-    
-    background: "#101419",
-    onBackground: "#e0e2ea",
-    onSurface: "#e0e2ea",
-    onSurfaceVariant: "#c0c7d4",
-    
-    outline: "#8a919e",
-    outlineVariant: "#404752",
-    
-    kineticGradient: ["#001c39", "#0078d4", "#a3c9ff"],
-  },
-  spacing: {
-    xs: 4,
-    sm: 8,
-    md: 16,
-    lg: 24,
-    xl: 32,
-    xxl: 40,
-  },
-  borderRadius: {
-    sm: 4,
-    md: 8,
-    lg: 12,
-    xl: 16,
-    full: 9999,
-  },
-  typography: {
-    fontFamily: "Inter",
-    h1: { fontSize: 32, fontWeight: "800", letterSpacing: -0.64 },
-    h2: { fontSize: 24, fontWeight: "700", letterSpacing: -0.48 },
-    body: { fontSize: 16, fontWeight: "400" },
-    label: { fontSize: 12, fontWeight: "600", letterSpacing: 0.6, textTransform: "uppercase" },
-  }
+  colors: COLORS,
+  spacing: SPACING,
+  borderRadius: BORDER_RADIUS,
+  typography: TYPOGRAPHY,
+  COLORS,
+  SPACING,
+  BORDER_RADIUS,
+  TYPOGRAPHY,
 } as const;

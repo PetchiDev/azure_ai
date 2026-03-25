@@ -13,31 +13,48 @@ const ACTION_PATTERNS: Record<AzureAction, string[]> = {
 
 const ENTITY_PATTERNS: Record<AzureEntity, string[]> = {
   // Order matters: check specific entities BEFORE generic 'resource'
-  'resource-group': ['resource group', 'resource-group', 'resourcegroup', 'rg list', 'all rg', 'list rg'],
   blob:             ['blob', 'storage account', 'storage', 'container', 'bucket', 'file storage'],
   function:         ['function app', 'function', 'serverless', 'azure function'],
   webapp:           ['web app', 'webapp', 'app service'],
   'app-registration': ['app registration', 'app reg', 'application', 'service principal', 'client app', 'entra app'],
   'user-access':    ['user', 'access', 'rbac', 'role', 'permission', 'assignment', 'who has', 'iam'],
-  resource:         ['resource', 'thing', 'everything', 'all'],
   database:         ['database', 'db', 'sql', 'cosmos', 'postgres'],
   billing:          ['billing', 'cost', 'invoice', 'spending', 'charges', 'budget'],
   logs:             ['log', 'activity', 'audit', 'event', 'history'],
   metrics:          ['metric', 'monitor', 'performance', 'cpu', 'memory', 'throughput'],
   subscription:     ['subscription', 'tenant', 'directory'],
+  'resource-group': ['resource group', 'resource-group', 'resourcegroup', 'resource groups', 'resources group', 'rg list', 'all rg', 'list rg'],
+  resource:         ['resource', 'thing', 'everything', 'all'],
   universal:        [], // Mapped dynamically via AZURE_PROVIDER_MAP
   unknown:          [],
 };
 
+
 function extractParams(input: string): Record<string, string> {
   const params: Record<string, string> = {};
   
-  // Extract name in quotes or after 'named'/'called'
-  const nameMatch = input.match(/(?:named?|called?)\s+["']?([a-zA-Z0-9_\-]+)["']?/i);
+  // Extract name in quotes or after 'named'/'called' / 'name'
+  const nameMatch = input.match(/(?:named?|called?|name)\s+["']?([a-zA-Z0-9_\-]+)["']?/i);
   if (nameMatch) params.name = nameMatch[1];
 
   // Extract resource group
-  const rgMatch = input.match(/(?:resource group|in rg|rg)\s+["']?([a-zA-Z0-9_\-]+)["']?/i);
+  // 1. Precise match: "in [NAME] resource group" or "in [NAME] rg" or "in [NAME] resource"
+  let rgMatch = input.match(/in\s+([a-zA-Z0-9_\-]+)\s+(?:resource group|rg|resource)\b/i);
+  
+  // 2. Keyword prefix: "resource group [NAME]" or "rg [NAME]"
+  if (!rgMatch) {
+    rgMatch = input.match(/\b(?:resource group|rg)\b\s+["']?([a-zA-Z0-9_\-]+)["']?/i);
+  }
+
+  // 3. Fallback: "in [NAME]" (avoiding known locations)
+  if (!rgMatch) {
+    const locations = ['eastus', 'westus', 'centralus', 'southeastasia', 'eastasia', 'westeurope', 'northeurope', 'southindia'];
+    const potentialIn = input.match(/\bin\s+["']?([a-zA-Z0-9_\-]+)["']?/i);
+    if (potentialIn && !locations.includes(potentialIn[1].toLowerCase())) {
+      rgMatch = potentialIn;
+    }
+  }
+
   if (rgMatch) params.resourceGroup = rgMatch[1];
 
   // Extract location
@@ -83,11 +100,21 @@ export function parseIntent(input: string): ParsedIntent {
   let detectedEntity: AzureEntity = 'unknown';
   for (const [entity, patterns] of Object.entries(ENTITY_PATTERNS) as [AzureEntity, string[]][]) {
     if (entity === 'unknown') continue;
-    if (patterns.some(p => lower.includes(p))) {
+    
+    if (patterns.some(p => {
+      // Use word boundaries for generic or very short patterns to avoid partial matches
+      // e.g., "resource" shouldn't match "resource-group"
+      if (p.length < 5 || ['resource', 'all', 'user', 'app'].includes(p)) {
+        const regex = new RegExp(`\\b${p}s?\\b`, 'i');
+        return regex.test(lower);
+      }
+      return lower.includes(p);
+    })) {
       detectedEntity = entity;
       break;
     }
   }
+
 
   const params = extractParams(input);
 

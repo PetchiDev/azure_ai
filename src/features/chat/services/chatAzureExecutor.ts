@@ -24,7 +24,9 @@ import {
   createSqlDatabase,
   createGenericResource,
   registerResourceProvider,
-} from '../../resources/services/azureService';
+} from '@/api/services/azureService';
+
+
 
 // ── Field definitions for guided creation ────────────────────────────────────
 
@@ -183,11 +185,15 @@ async function executeCreation(entity: string, params: Record<string, string>): 
         return { summary: `⚠️ Resource type **${effectiveEntity}** creation is not yet fully supported via chat.\n\nSupported: _blob, function, webapp, resource-group, app-registration, user-access, database, plus 50+ others!_` };
     }
   } catch (err: any) {
-    const errorMsg = err?.response?.data?.error?.message || err?.message || 'Unknown error';
-    if (errorMsg.includes('MissingSubscriptionRegistration')) {
+    const errorData = err?.response?.data?.error;
+    const errorMsg = errorData?.message || err?.message || 'Unknown error';
+    const errorCode = errorData?.code || '';
+    const isMissingReg = errorCode === 'MissingSubscriptionRegistration' || errorMsg.includes('MissingSubscriptionRegistration');
+
+    if (isMissingReg) {
       const namespace = errorMsg.match(/namespace '([^']+)'/)?.[1] || 'Microsoft.Storage';
       return {
-        summary: `❌ **Missing Registration**: Your subscription is not registered for **${namespace}**.\n\nWould you like me to register it for you? Type: _"register provider ${namespace}"_`,
+        summary: `❌ **Missing Registration**: Your subscription is not registered for **${namespace}**.\n\n**To fix this, type**: _"register provider ${namespace}"_`,
         isError: true,
       };
     }
@@ -197,6 +203,7 @@ async function executeCreation(entity: string, params: Record<string, string>): 
     };
   }
 }
+
 
 // ── Main execute intent function ─────────────────────────────────────────────
 
@@ -419,11 +426,15 @@ export async function executeIntent(intent: ParsedIntent): Promise<ExecutorResul
       summary: `🤔 I wasn't sure how to handle that. Here are things I can help with:\n\n• _"list all resources"_\n• _"create storage account"_\n• _"create function app"_\n• _"check billing"_\n• _"show activity logs"_\n• _"who has access"_`,
     };
   } catch (err: any) {
-    const errorMsg = err?.response?.data?.error?.message || err?.message || 'Unknown error';
-    if (errorMsg.includes('MissingSubscriptionRegistration')) {
+    const errorData = err?.response?.data?.error;
+    const errorMsg = errorData?.message || err?.message || 'Unknown error';
+    const errorCode = errorData?.code || '';
+    const isMissingReg = errorCode === 'MissingSubscriptionRegistration' || errorMsg.includes('MissingSubscriptionRegistration');
+
+    if (isMissingReg) {
       const namespace = errorMsg.match(/namespace '([^']+)'/)?.[1] || 'Microsoft.Storage';
       return {
-        summary: `❌ **Missing Registration**: Your subscription is not registered for **${namespace}**.\n\nWould you like me to register it for you? Type: _"register provider ${namespace}"_`,
+        summary: `❌ **Missing Registration**: Your subscription is not registered for **${namespace}**.\n\n**To fix this, type**: _"register provider ${namespace}"_`,
         isError: true,
       };
     }
@@ -433,3 +444,4 @@ export async function executeIntent(intent: ParsedIntent): Promise<ExecutorResul
     };
   }
 }
+

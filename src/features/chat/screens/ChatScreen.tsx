@@ -11,7 +11,8 @@ import {
   ActivityIndicator,
   Animated as RNAnimated,
 } from 'react-native';
-import { THEME } from '../../../constants/theme';
+import { THEME } from '@/constants/theme';
+
 import { ChatMessage, ConversationContext } from '../types/chat.types';
 import { parseIntent } from '../services/chatIntentParser';
 import { executeIntent, continueCreation } from '../services/chatAzureExecutor';

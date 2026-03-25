@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { THEME } from '../../../constants/theme';
-import { KineticCard } from '../../../components/ui/KineticCard';
+import { THEME } from '@/constants/theme';
+import { KineticCard } from '@/components/ui/KineticCard';
 import { analyzeBilling } from '../services/aiInsightService';
 import { AlertTriangle, Ghost, Sparkles, TrendingDown } from 'lucide-react-native';
-import { useBilling, useResources } from '../../../hooks/useAzure';
+import { useBilling, useResources } from '@/hooks/useAzure';
+
 
 export const AIOptimizationScreen = () => {
   const { data: billing, isLoading: loadingBilling } = useBilling();
