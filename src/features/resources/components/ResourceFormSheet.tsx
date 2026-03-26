@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
-import { X, Plus, Info, ChevronDown } from 'lucide-react-native';
-import { THEME } from '@/constants/theme';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { X, Plus, Info, ChevronDown, Cpu, Database, Layers, Globe } from 'lucide-react-native';
 import { GlassContainer } from '@/components/common/GlassContainer';
 import { KineticButton } from '@/components/ui/KineticButton';
 import { KineticInput } from '@/components/ui/KineticInput';
 import { useCreateResource } from '@/hooks/useAzure';
-
 
 interface Tag {
   key: string;
@@ -36,7 +34,7 @@ export const ResourceFormSheet: React.FC<ResourceFormSheetProps> = ({
   
   const [formData, setFormData] = useState<FormData>({
     name: '',
-    region: 'East US 2',
+    region: 'South India',
     environment: 'Production',
     tags: [{ key: 'CostCenter', value: 'INFRA-402' }],
     type: 'apps',
@@ -46,17 +44,24 @@ export const ResourceFormSheet: React.FC<ResourceFormSheetProps> = ({
 
   useEffect(() => {
     if (editingResource) {
+      // Azure tags are an object { "key": "value" }, we need Tag[] { key, value }
+      const azureTags = editingResource.tags || {};
+      const formattedTags: Tag[] = Object.entries(azureTags).map(([key, value]) => ({
+        key,
+        value: String(value),
+      }));
+
       setFormData({
         name: editingResource.name || '',
-        region: editingResource.region || editingResource.location || 'East US 2',
-        environment: editingResource.environment || 'Production',
-        tags: editingResource.tags || [{ key: 'CostCenter', value: 'INFRA-402' }],
+        region: editingResource.region || editingResource.location || 'South India',
+        environment: editingResource.environment || (azureTags['Environment'] as string) || 'Production',
+        tags: formattedTags.length > 0 ? formattedTags : [{ key: 'CostCenter', value: 'INFRA-402' }],
         type: editingResource.type || 'apps',
       });
     } else {
       setFormData({
         name: '',
-        region: 'East US 2',
+        region: 'South India',
         environment: 'Production',
         tags: [{ key: 'CostCenter', value: 'INFRA-402' }],
         type: 'apps',
@@ -72,7 +77,7 @@ export const ResourceFormSheet: React.FC<ResourceFormSheetProps> = ({
 
   const handleUpdateTag = (index: number, field: 'key' | 'value', value: string) => {
     const newTags = [...formData.tags];
-    newTags[index][field] = value;
+    (newTags[index] as any)[field] = value;
     setFormData({ ...formData, tags: newTags });
   };
 
@@ -83,11 +88,24 @@ export const ResourceFormSheet: React.FC<ResourceFormSheetProps> = ({
 
   const handleSave = async () => {
     try {
+      // Convert Tag[] back to Azure object { key: value }
+      const tagsObject = formData.tags.reduce((acc, tag) => {
+        if (tag.key) acc[tag.key] = tag.value;
+        return acc;
+      }, {} as Record<string, string>);
+
+      // Add environment tag if not present
+      if (formData.environment) {
+        tagsObject['Environment'] = formData.environment;
+      }
+
       if (editingResource) {
-          // Update not fully implemented in useAzure yet
           alert('Update feature is coming soon to real APIs.');
       } else {
-          await createMutation.mutateAsync({ type: formData.type, data: formData });
+          await createMutation.mutateAsync({ 
+            type: formData.type, 
+            data: { ...formData, tags: tagsObject } 
+          });
       }
       onClose();
     } catch (error) {
@@ -96,54 +114,71 @@ export const ResourceFormSheet: React.FC<ResourceFormSheetProps> = ({
   };
 
   const typeLabels = {
-    apps: 'App Registration',
+    apps: 'App Service',
     blobs: 'Blob Storage',
-    functions: 'Function API'
+    functions: 'Function Node'
+  };
+
+  const typeIcons = {
+    apps: <Layers size={18} color="#904d00" />,
+    blobs: <Database size={18} color="#904d00" />,
+    functions: <Cpu size={18} color="#904d00" />
   };
 
   const loading = createMutation.isPending;
 
   return (
-    <View style={styles.sheetOverlay}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-        <GlassContainer intensity={60} style={styles.sheetContainer}>
-           <View style={styles.header}>
+    <View className="absolute inset-0 z-[1000]">
+        <TouchableOpacity 
+          className="absolute inset-0 bg-slate-900/60" 
+          activeOpacity={1} 
+          onPress={onClose} 
+        />
+        <GlassContainer intensity={90} className="absolute bottom-0 left-0 right-0 h-[92%] bg-white rounded-t-[40px] shadow-2xl">
+           <View className="flex-row justify-between items-center px-8 py-6 border-b border-orange-50/10 bg-white/50">
              <View>
-               <Text style={styles.title}>{editingResource ? 'Update' : 'Create'} {typeLabels[formData.type]}</Text>
-               <Text style={styles.subtitle}>{editingResource ? 'EDITING RESOURCE' : 'NEW CLOUD INSTANCE'}</Text>
+               <Text className="text-xl font-bold text-on-surface tracking-tight">
+                 {editingResource ? 'Update' : 'Provision'} {typeLabels[formData.type]}
+               </Text>
+               <Text className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mt-1">
+                 {editingResource ? 'Modify Kinetic Instance' : 'New Cloud Sequence'}
+               </Text>
              </View>
-             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-               <X color={THEME.colors.onSurfaceVariant} size={24} />
+             <TouchableOpacity onPress={onClose} className="w-10 h-10 rounded-full bg-slate-50 items-center justify-center">
+               <X color="#515f74" size={20} />
              </TouchableOpacity>
            </View>
 
-           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+           <ScrollView className="flex-1 px-8 py-6" showsVerticalScrollIndicator={false}>
              {!editingResource && (
-               <View style={styles.section}>
-                 <Text style={styles.sectionTitle}>RESOURCE TYPE</Text>
+               <View className="mb-8">
+                 <Text className="text-[10px] font-black text-primary uppercase tracking-[2px] mb-4">Resource Type</Text>
                  <TouchableOpacity 
-                   style={styles.typeSelector} 
+                   className="flex-row justify-between items-center bg-slate-50 border border-outline-variant/5 p-4 rounded-2xl"
                    onPress={() => setShowTypePicker(!showTypePicker)}
                  >
-                   <Text style={styles.typeSelectorText}>{typeLabels[formData.type]}</Text>
-                   <ChevronDown size={20} color={THEME.colors.primary} />
+                    <View className="flex-row items-center gap-3">
+                       {typeIcons[formData.type]}
+                       <Text className="text-sm font-bold text-on-surface">{typeLabels[formData.type]}</Text>
+                    </View>
+                    <ChevronDown size={18} color="#904d00" />
                  </TouchableOpacity>
 
                  {showTypePicker && (
-                   <View style={styles.typeOptions}>
+                   <View className="mt-2 bg-white rounded-2xl border border-outline-variant/10 shadow-sm overflow-hidden">
                      {(['apps', 'blobs', 'functions'] as const).map((t) => (
                        <TouchableOpacity
                          key={t}
-                         style={styles.typeOption}
+                         className={`flex-row items-center gap-3 p-4 border-b border-slate-50 ${formData.type === t ? 'bg-orange-50/30' : ''}`}
                          onPress={() => {
                            setFormData({ ...formData, type: t });
                            setShowTypePicker(false);
                          }}
                        >
-                         <Text style={[
-                           styles.typeOptionText,
-                           formData.type === t && styles.typeOptionTextActive
-                         ]}>{typeLabels[t]}</Text>
+                         {typeIcons[t]}
+                         <Text className={`text-sm ${formData.type === t ? 'font-bold text-primary' : 'font-medium text-on-surface-variant'}`}>
+                           {typeLabels[t]}
+                         </Text>
                        </TouchableOpacity>
                      ))}
                    </View>
@@ -151,83 +186,83 @@ export const ResourceFormSheet: React.FC<ResourceFormSheetProps> = ({
                </View>
              )}
 
-             <View style={styles.section}>
-               <Text style={styles.sectionTitle}>BASIC CONFIGURATION</Text>
-               <View style={styles.fieldContainer}>
-                 <Text style={styles.label}>Name</Text>
-                 <KineticInput
-                   placeholder="e.g. kv-prod-service"
-                   value={formData.name}
-                   onChangeText={(text) => setFormData({ ...formData, name: text })}
-                 />
-                 <View style={styles.hintContainer}>
-                   <Info size={12} color={THEME.colors.onSurfaceVariant} />
-                   <Text style={styles.hint}>Global identifiers must be unique.</Text>
-                 </View>
+             <View className="mb-8">
+               <Text className="text-[10px] font-black text-primary uppercase tracking-[2px] mb-4">Core Sequence</Text>
+               <KineticInput
+                 label="Instance Name"
+                 placeholder="e.g. kv-prod-cluster"
+                 value={formData.name}
+                 onChangeText={(text) => setFormData({ ...formData, name: text })}
+               />
+               <View className="flex-row items-center gap-2 mt-[-8px] mb-4 ml-1 opacity-60">
+                 <Info size={10} color="#515f74" />
+                 <Text className="text-[10px] font-medium text-on-surface-variant">Global alphanumeric identifiers only.</Text>
                </View>
 
-               <View style={styles.fieldContainer}>
-                 <Text style={styles.label}>Region</Text>
-                 <KineticInput
-                   placeholder="e.g. East US 2"
-                   value={formData.region}
-                   onChangeText={(text) => setFormData({ ...formData, region: text })}
-                 />
+               <View className="flex-row gap-4">
+                  <View className="flex-1">
+                     <Text className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 ml-1">Primary Region</Text>
+                     <TouchableOpacity className="bg-slate-50 border border-outline-variant/5 p-4 rounded-2xl flex-row justify-between items-center">
+                        <View className="flex-row items-center gap-2">
+                           <Globe size={14} color="#515f74" />
+                           <Text className="text-sm font-bold text-on-surface">{formData.region}</Text>
+                        </View>
+                        <ChevronDown size={14} color="#515f74" />
+                     </TouchableOpacity>
+                  </View>
                </View>
              </View>
 
-             <View style={styles.section}>
-               <View style={styles.sectionHeader}>
-                 <Text style={styles.sectionTitle}>METADATA & TAGS</Text>
-                 <TouchableOpacity onPress={handleAddTag} style={styles.addTagButton}>
-                   <Plus size={14} color={THEME.colors.primary} />
-                   <Text style={styles.addTagText}>Add Tag</Text>
+             <View className="mb-10">
+               <View className="flex-row justify-between items-center mb-4">
+                 <Text className="text-[10px] font-black text-primary uppercase tracking-[2px]">Matrix Tags</Text>
+                 <TouchableOpacity onPress={handleAddTag} className="flex-row items-center gap-1 bg-orange-50 px-3 py-1.5 rounded-full">
+                   <Plus size={12} color="#904d00" />
+                   <Text className="text-[9px] font-bold text-primary uppercase">Add Node</Text>
                  </TouchableOpacity>
                </View>
 
-               <View style={styles.fieldContainer}>
-                 <Text style={styles.label}>Environment</Text>
-                 <View style={styles.envGrid}>
+               <View className="mb-6">
+                 <Text className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Environment Stage</Text>
+                 <View className="flex-row gap-2">
                    {['Production', 'Staging', 'Dev'].map((env) => (
                      <TouchableOpacity
                        key={env}
-                       style={[
-                         styles.envButton,
-                         formData.environment === env && styles.envButtonActive,
-                       ]}
+                       className={`flex-1 py-3 rounded-xl border items-center ${formData.environment === env ? 'bg-primary border-primary' : 'bg-white border-outline-variant/10'}`}
                        onPress={() => setFormData({ ...formData, environment: env })}
                      >
-                       <Text style={[
-                         styles.envButtonText,
-                         formData.environment === env && styles.envButtonTextActive
-                       ]}>{env}</Text>
+                       <Text className={`text-[10px] font-extrabold uppercase tracking-tighter ${formData.environment === env ? 'text-white' : 'text-on-surface-variant'}`}>
+                         {env}
+                       </Text>
                      </TouchableOpacity>
                    ))}
                  </View>
                </View>
 
-               {formData.tags.map((tag, index) => (
-                 <View key={index} style={styles.tagRow}>
-                   <View style={{ flex: 1 }}>
-                      <Text style={styles.tagLabel}>Key</Text>
+               {(formData.tags || []).map((tag, index) => (
+                 <View key={index} className="flex-row gap-3 mb-4 bg-slate-50/50 p-4 rounded-2xl border border-outline-variant/5">
+                   <View className="flex-1">
+                      <Text className="text-[8px] font-bold text-slate-400 uppercase mb-1">Key</Text>
                       <TextInput
-                        style={styles.tagInput}
+                        className="text-xs font-bold text-on-surface"
                         value={tag.key}
                         onChangeText={(text) => handleUpdateTag(index, 'key', text)}
-                        placeholderTextColor={THEME.colors.onSurfaceVariant + '80'}
+                        placeholder="Tag Key"
+                        placeholderTextColor="#515f7433"
                       />
                    </View>
-                   <View style={{ flex: 1 }}>
-                      <Text style={styles.tagLabel}>Value</Text>
-                      <View style={styles.tagValueContainer}>
+                   <View className="flex-1 border-l border-slate-200 pl-3">
+                      <Text className="text-[8px] font-bold text-slate-400 uppercase mb-1">Value</Text>
+                      <View className="flex-row items-center justify-between">
                          <TextInput
-                           style={[styles.tagInput, { flex: 1 }]}
+                           className="text-xs font-bold text-primary flex-1"
                            value={tag.value}
                            onChangeText={(text) => handleUpdateTag(index, 'value', text)}
-                           placeholderTextColor={THEME.colors.onSurfaceVariant + '80'}
+                           placeholder="Tag Value"
+                           placeholderTextColor="#904d0033"
                          />
-                         <TouchableOpacity onPress={() => handleRemoveTag(index)} style={styles.removeTagButton}>
-                           <X size={16} color={THEME.colors.error} />
+                         <TouchableOpacity onPress={() => handleRemoveTag(index)} className="p-1">
+                           <X size={14} color="#ba1a1a" />
                          </TouchableOpacity>
                       </View>
                    </View>
@@ -236,253 +271,34 @@ export const ResourceFormSheet: React.FC<ResourceFormSheetProps> = ({
              </View>
            </ScrollView>
 
-           <View style={styles.footer}>
-             <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={loading}>
-               <Text style={styles.cancelButtonText}>Cancel</Text>
-             </TouchableOpacity>
-             <KineticButton
-               title={editingResource ? 'Update' : 'Create'}
-               onPress={handleSave}
-               variant="primary"
-               style={styles.submitButton}
-               disabled={loading || !formData.name}
-             />
+           <View className="px-8 pt-4 pb-10 bg-white border-t border-orange-50/10 flex-row items-center gap-4">
+              <TouchableOpacity 
+                className="flex-1 bg-slate-50 py-4 rounded-2xl items-center" 
+                onPress={onClose} 
+                disabled={loading}
+              >
+                <Text className="text-sm font-bold text-on-surface-variant uppercase tracking-widest">Cancel</Text>
+              </TouchableOpacity>
+              
+              <View className="flex-[1.5]">
+                 <KineticButton
+                   title={editingResource ? 'Update Instance' : 'Execute Sequence'}
+                   onPress={handleSave}
+                   variant="primary"
+                   disabled={loading || !formData.name}
+                 />
+              </View>
            </View>
+
            {loading && (
-             <View style={styles.loaderOverlay}>
-               <ActivityIndicator color={THEME.colors.primary} size="large" />
+             <View className="absolute inset-0 bg-white/60 items-center justify-center z-[2000] backdrop-blur-sm">
+                <View className="bg-white p-6 rounded-3xl shadow-xl items-center gap-3">
+                   <ActivityIndicator color="#904d00" size="large" />
+                   <Text className="text-[10px] font-bold text-primary uppercase tracking-[3px]">Provisioning...</Text>
+                </View>
              </View>
            )}
         </GlassContainer>
-     </View>
+    </View>
   );
 };
-
-const styles = StyleSheet.create({
-  sheetOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1000,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  sheetContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '90%',
-    backgroundColor: THEME.colors.surfaceContainerLow,
-    padding: 0,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 20,
-  },
-  header: {
-    padding: THEME.spacing.lg,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#FFFFFF1A',
-    backgroundColor: THEME.colors.surface,
-  },
-  title: {
-    fontFamily: THEME.typography.fontFamily,
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontFamily: THEME.typography.fontFamily,
-    fontSize: 10,
-    fontWeight: '700',
-    color: THEME.colors.onSurfaceVariant,
-    letterSpacing: 1.5,
-    marginTop: 4,
-  },
-  closeButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: THEME.colors.surfaceContainerHighest,
-  },
-  content: {
-    flex: 1,
-    padding: THEME.spacing.lg,
-  },
-  section: {
-    marginBottom: THEME.spacing.xl,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: THEME.spacing.md,
-  },
-  sectionTitle: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: THEME.colors.primary,
-    letterSpacing: 2,
-    marginBottom: THEME.spacing.sm,
-  },
-  typeSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: THEME.colors.surfaceContainerLowest,
-    padding: THEME.spacing.md,
-    borderRadius: THEME.borderRadius.md,
-    borderWidth: 1,
-    borderColor: '#FFFFFF33',
-  },
-  typeSelectorText: {
-    ...THEME.typography.body,
-    color: THEME.colors.onSurface,
-    fontWeight: '600',
-  },
-  typeOptions: {
-    marginTop: THEME.spacing.xs,
-    backgroundColor: THEME.colors.surfaceContainerLowest,
-    borderRadius: THEME.borderRadius.md,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#FFFFFF33',
-  },
-  typeOption: {
-    padding: THEME.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: '#FFFFFF1A',
-  },
-  typeOptionText: {
-    ...THEME.typography.body,
-    color: THEME.colors.onSurfaceVariant,
-  },
-  typeOptionTextActive: {
-    color: THEME.colors.primary,
-    fontWeight: '700',
-  },
-  addTagButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  addTagText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: THEME.colors.onSurfaceVariant,
-  },
-  fieldContainer: {
-    marginBottom: THEME.spacing.md,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: THEME.colors.onSurface,
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  hintContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 6,
-    marginLeft: 4,
-  },
-  hint: {
-    fontSize: 10,
-    color: THEME.colors.onSurfaceVariant,
-    fontStyle: 'italic',
-  },
-  envGrid: {
-    flexDirection: 'row',
-    gap: THEME.spacing.sm,
-  },
-  envButton: {
-    flex: 1,
-    height: 36,
-    borderRadius: THEME.borderRadius.lg,
-    borderWidth: 1,
-    borderColor: '#FFFFFF33',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  envButtonActive: {
-    borderColor: THEME.colors.primary,
-    backgroundColor: THEME.colors.primary + '1A',
-  },
-  envButtonText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: THEME.colors.onSurfaceVariant,
-  },
-  envButtonTextActive: {
-    color: THEME.colors.primary,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    gap: THEME.spacing.md,
-    marginBottom: THEME.spacing.md,
-  },
-  tagLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: THEME.colors.onSurfaceVariant,
-    marginBottom: 4,
-    marginLeft: 4,
-    textTransform: 'uppercase',
-  },
-  tagInput: {
-    height: 40,
-    backgroundColor: THEME.colors.surfaceContainerLowest,
-    borderRadius: THEME.borderRadius.lg,
-    paddingHorizontal: 12,
-    color: '#FFFFFF',
-    fontSize: 12,
-    borderWidth: 1,
-    borderColor: '#FFFFFF33',
-  },
-  tagValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  removeTagButton: {
-    padding: 8,
-  },
-  footer: {
-    padding: THEME.spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: '#FFFFFF1A',
-    backgroundColor: THEME.colors.surface,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: THEME.spacing.md,
-  },
-  cancelButton: {
-    paddingHorizontal: 20,
-    height: 48,
-    justifyContent: 'center',
-  },
-  cancelButtonText: {
-    color: THEME.colors.onSurfaceVariant,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  submitButton: {
-    width: 140,
-  },
-  loaderOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 2000,
-  },
-});

@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
-import { THEME } from '../../constants/theme';
+import { View, ViewStyle } from 'react-native';
 
 interface KineticCardProps {
   children: React.ReactNode;
@@ -15,40 +14,23 @@ export const KineticCard: React.FC<KineticCardProps> = ({
   variant = 'high',
   hasAccent = false,
 }) => {
-  const getBackgroundColor = () => {
+  const getVariantClass = () => {
     switch (variant) {
-      case 'low': return THEME.colors.surfaceContainerLow;
-      case 'highest': return THEME.colors.surfaceContainerHighest;
-      default: return THEME.colors.surfaceContainerHigh;
+      case 'low': return 'bg-white shadow-sm';
+      case 'highest': return 'bg-white shadow-lg border border-orange-50/20';
+      default: return 'bg-white shadow-md border border-outline-variant/5';
     }
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: getBackgroundColor() }, style]}>
-      {hasAccent && <View style={styles.accent} />}
-      <View style={styles.content}>
+    <View 
+      className={`rounded-3xl overflow-hidden relative my-2 ${getVariantClass()}`}
+      style={style}
+    >
+      {hasAccent && <View className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary" />}
+      <View className="p-5">
         {children}
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  card: {
-    borderRadius: THEME.borderRadius.lg,
-    overflow: 'hidden',
-    position: 'relative',
-    marginVertical: THEME.spacing.sm,
-  },
-  accent: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: THEME.colors.primary,
-  },
-  content: {
-    padding: THEME.spacing.md,
-  },
-});

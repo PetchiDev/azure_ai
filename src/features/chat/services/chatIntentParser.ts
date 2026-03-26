@@ -38,19 +38,21 @@ function extractParams(input: string): Record<string, string> {
   if (nameMatch) params.name = nameMatch[1];
 
   // Extract resource group
-  // 1. Precise match: "in [NAME] resource group" or "in [NAME] rg" or "in [NAME] resource"
-  let rgMatch = input.match(/in\s+([a-zA-Z0-9_\-]+)\s+(?:resource group|rg|resource)\b/i);
+  // 1. Precise match: "in [NAME] resource group" or "in [NAME] rg"
+  let rgMatch = input.match(/in\s+([a-zA-Z0-9_\-]+)\s+(?:resource group|rg)\b/i);
   
   // 2. Keyword prefix: "resource group [NAME]" or "rg [NAME]"
   if (!rgMatch) {
     rgMatch = input.match(/\b(?:resource group|rg)\b\s+["']?([a-zA-Z0-9_\-]+)["']?/i);
+    // Avoid matching if it just captured the trailing 's' of 'groups'
+    if (rgMatch && rgMatch[1] === 's') rgMatch = null;
   }
 
-  // 3. Fallback: "in [NAME]" (avoiding known locations)
+  // 3. Fallback: "in [NAME]" (avoiding known locations and 'resource' / 'all')
   if (!rgMatch) {
-    const locations = ['eastus', 'westus', 'centralus', 'southeastasia', 'eastasia', 'westeurope', 'northeurope', 'southindia'];
+    const skipList = ['eastus', 'westus', 'centralus', 'southeastasia', 'eastasia', 'westeurope', 'northeurope', 'southindia', 'resource', 'all', 'everything'];
     const potentialIn = input.match(/\bin\s+["']?([a-zA-Z0-9_\-]+)["']?/i);
-    if (potentialIn && !locations.includes(potentialIn[1].toLowerCase())) {
+    if (potentialIn && !skipList.includes(potentialIn[1].toLowerCase())) {
       rgMatch = potentialIn;
     }
   }

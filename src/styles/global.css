@@ -1,3 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .kinetic-gradient {
+    background: linear-gradient(135deg, #904d00 0%, #ff8c00 100%);
+  }
+  .glass-panel {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(24px);
+  }
+  .status-blade-orange { border-left-width: 4px; border-left-color: #ff8c00; }
+  .status-blade-green { border-left-width: 4px; border-left-color: #2e7d32; }
+  .status-blade-red { border-left-width: 4px; border-left-color: #ba1a1a; }
+}

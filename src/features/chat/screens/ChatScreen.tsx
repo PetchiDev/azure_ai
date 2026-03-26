@@ -3,29 +3,26 @@ import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   FlatList,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Animated as RNAnimated,
+  Image,
+  ScrollView,
 } from 'react-native';
-import { THEME } from '@/constants/theme';
-
 import { ChatMessage, ConversationContext } from '../types/chat.types';
 import { parseIntent } from '../services/chatIntentParser';
 import { executeIntent, continueCreation } from '../services/chatAzureExecutor';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Send, Bot, User, ChevronRight } from 'lucide-react-native';
+import { Send, Bot, User, ChevronRight, Sparkles, Plus, Search, MessageSquare, Globe, Cpu, Zap, Activity, Info, CircleAlert, CircleCheck, Mic } from 'lucide-react-native';
 
 const SUGGESTIONS = [
-  'List all resources',
-  'Show blob storage',
-  'Check billing',
-  'Show activity logs',
-  'Who has access',
-  'Show function apps',
+  'Empty storage accounts?',
+  'Security audit for VMs',
+  'Monthly cost report',
+  'Delete my test app',
+  'Create premium SQL DB',
 ];
 
 const generateId = () => Math.random().toString(36).slice(2);
@@ -39,25 +36,41 @@ const WELCOME: ChatMessage = {
 
 // ── Sub-component: Data Table ──────────────────────────────────────────
 function DataTable({ data }: { data: any[] }) {
-  if (!data || data.length === 0) return null;
-  const keys = Object.keys(data[0]);
+  const dataArray = Array.isArray(data) ? data : (data ? [data] : []);
+  const validData = dataArray.filter(item => item !== null && item !== undefined);
+  if (validData.length === 0) return null;
+  const keys = Object.keys(validData[0]);
 
   return (
-    <View style={styles.tableContainer}>
-      <View style={styles.tableHeader}>
-        {keys.map(k => (
-          <Text key={k} style={styles.tableHeaderCell}>{k.toUpperCase()}</Text>
-        ))}
-      </View>
-      {data.slice(0, 8).map((row, i) => (
-        <View key={i} style={[styles.tableRow, i % 2 === 0 && styles.tableRowAlt]}>
-          {keys.map(k => (
-            <Text key={k} style={styles.tableCell} numberOfLines={1}>{String(row[k] ?? '—')}</Text>
+    <View className="mt-4 rounded-md overflow-hidden border border-outline-variant/10 bg-surface-container">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View>
+          <View className="flex-row bg-surface-container-high p-3 border-b border-outline-variant/10">
+            {keys.map(k => (
+              <Text key={k} className="w-24 text-[9px] font-bold text-primary uppercase tracking-wider">{k}</Text>
+            ))}
+          </View>
+          {validData.slice(0, 8).map((row, i) => (
+            <View key={i} className={`flex-row p-3 ${i % 2 === 0 ? 'bg-transparent' : 'bg-surface-container-low/30'}`}>
+              {keys.map(k => (
+                <Text key={k} className="w-24 text-[10px] font-medium text-on-surface-variant" numberOfLines={1}>
+                  {(() => {
+                    const val = row[k];
+                    if (val && typeof val === 'object') {
+                      return val.name || val.displayName || val.text || JSON.stringify(val);
+                    }
+                    return String(val ?? '—');
+                  })()}
+                </Text>
+              ))}
+            </View>
           ))}
         </View>
-      ))}
+      </ScrollView>
       {data.length > 8 && (
-        <Text style={styles.tableMore}>+{data.length - 8} more</Text>
+        <View className="py-2 bg-surface-container-high border-t border-outline-variant/10">
+          <Text className="text-[9px] font-bold text-primary text-center uppercase tracking-widest">+{data.length - 8} MORE ITEMS</Text>
+        </View>
       )}
     </View>
   );
@@ -66,58 +79,97 @@ function DataTable({ data }: { data: any[] }) {
 // ── Sub-component: Message Bubble ──────────────────────────────────────
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user';
+  const isError = message.role === 'error';
 
   return (
-    <View style={[styles.messageRow, isUser && styles.messageRowUser]}>
-      <View style={[styles.avatar, isUser ? styles.avatarUser : styles.avatarAssistant]}>
-        {isUser
-          ? <User size={14} color="white" />
-          : <Bot size={14} color={THEME.colors.primary} />
-        }
-      </View>
-      <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}>
-        <RenderMarkdown text={message.text} isUser={isUser} />
-        {message.data && <DataTable data={message.data} />}
-        <Text style={styles.timestamp}>
-          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
+    <View className={`flex-col mb-8 gap-2 ${isUser ? 'items-end' : 'items-start'}`}>
+      {!isUser && (
+        <View className="flex-row items-center gap-2 mb-2 px-1">
+          <View className="w-1.5 h-1.5 rounded-full bg-primary" />
+          <Text className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">[ KINETIC_CORE ]</Text>
+        </View>
+      )}
+      
+      <View className={`flex-row max-w-[90%] items-end gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
+        <View className={`w-8 h-8 rounded-md items-center justify-center flex-shrink-0 shadow-sm ${isUser ? 'bg-primary' : 'bg-surface-container border border-outline-variant/10'}`}>
+          {isUser
+            ? <User size={16} color="white" />
+            : <Bot size={16} color="#904d00" />
+          }
+        </View>
+        
+        <View className={`flex-1 p-4 rounded-md shadow-kinetic ${isUser ? 'bg-primary rounded-br-none' : 'bg-surface-container-low border border-outline-variant/10 rounded-bl-none'} ${isError ? 'border-error-container bg-error-container/10' : ''}`}>
+          <RenderMarkdown text={message.text} isUser={isUser} isError={isError} />
+          {message.data && <DataTable data={message.data} />}
+          
+          <View className="flex-row items-center justify-between mt-3 opacity-30">
+             <Text className={`text-[8px] font-bold uppercase tracking-tighter ${isUser ? 'text-white' : 'text-on-surface-variant'}`}>
+                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+             </Text>
+             {isUser && <CircleCheck size={8} color="white" />}
+          </View>
+        </View>
       </View>
     </View>
   );
 }
 
-// Simple bold/italic renderer
-function RenderMarkdown({ text, isUser }: { text: string; isUser: boolean }) {
-  const color = isUser ? 'white' : THEME.colors.onSurface;
-  const parts = text.split(/(\*\*[^*]+\*\*|_[^_]+_)/);
+// Improved Markdown renderer for lists and formatting
+function RenderMarkdown({ text, isUser, isError }: { text: string; isUser: boolean; isError?: boolean }) {
+  const textColor = isUser ? 'text-white' : (isError ? 'text-error' : 'text-on-surface');
+  
+  // Split by lines to handle bullet points and blocks
+  const lines = text.split('\n');
 
   return (
-    <Text>
-      {parts.map((part, i) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          return <Text key={i} style={[styles.msgText, { color, fontWeight: 'bold' }]}>{part.slice(2, -2)}</Text>;
-        }
-        if (part.startsWith('_') && part.endsWith('_')) {
-          return <Text key={i} style={[styles.msgText, { color, opacity: 0.7, fontStyle: 'italic' }]}>{part.slice(1, -1)}</Text>;
-        }
-        return <Text key={i} style={[styles.msgText, { color }]}>{part}</Text>;
+    <View className="gap-1.5">
+      {lines.map((line, lineIdx) => {
+        const trimmedLine = line.trim();
+        
+        // Handle Bullet Points
+        const isBullet = trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ') || trimmedLine.startsWith('• ');
+        const isHeader = trimmedLine.startsWith('#');
+        
+        // Handle bold/italic in the line
+        const parts = line.split(/(\*\*[^*]+\*\*|_[^_]+_)/);
+
+        return (
+          <View key={lineIdx} className={`flex-row ${isBullet ? 'pl-4' : ''}`}>
+             {isBullet && <Text className={`mr-2 ${textColor} opacity-60`}>•</Text>}
+             <Text className="flex-1 leading-relaxed">
+               {parts.map((part, i) => {
+                 if (part.startsWith('**') && part.endsWith('**')) {
+                   return <Text key={i} className={`text-sm ${isHeader ? 'text-base font-extrabold' : 'font-bold'} ${textColor}`}>{part.slice(2, -2)}</Text>;
+                 }
+                 if (part.startsWith('_') && part.endsWith('_')) {
+                   return <Text key={i} className={`text-sm italic opacity-80 ${textColor}`}>{part.slice(1, -1)}</Text>;
+                 }
+                 if (isHeader) {
+                    return <Text key={i} className={`text-base font-extrabold ${textColor}`}>{part.replace(/^#+\s/, '')}</Text>;
+                 }
+                 return <Text key={i} className={`text-sm font-medium ${textColor}`}>{part}</Text>;
+               })}
+             </Text>
+          </View>
+        );
       })}
-    </Text>
+    </View>
   );
 }
 
 // ── Sub-component: Typing Indicator ───────────────────────────────────
 function TypingIndicator() {
   return (
-    <View style={[styles.messageRow]}>
-      <View style={[styles.avatar, styles.avatarAssistant]}>
-        <Bot size={14} color={THEME.colors.primary} />
+    <View className="flex-row mb-8 items-end gap-3">
+      <View className="w-8 h-8 rounded-md bg-surface-container border border-outline-variant/10 items-center justify-center shadow-sm">
+        <Bot size={16} color="#904d00" />
       </View>
-      <View style={[styles.bubble, styles.bubbleAssistant, styles.typingBubble]}>
-        <ActivityIndicator size="small" color={THEME.colors.primary} />
-        <Text style={[styles.msgText, { color: THEME.colors.onSurfaceVariant, marginLeft: 8 }]}>
-          Querying Azure...
-        </Text>
+      <View className="bg-surface-container-low border border-outline-variant/5 p-4 rounded-md rounded-bl-none shadow-kinetic flex-row items-center gap-3">
+        <ActivityIndicator size="small" color="#904d00" />
+        <View>
+          <Text className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest leading-none mb-1">Kinetic Intelligence</Text>
+          <Text className="text-[9px] font-medium text-primary uppercase tracking-tighter">Analyzing Cloud Topology...</Text>
+        </View>
       </View>
     </View>
   );
@@ -128,7 +180,6 @@ export const ChatScreen = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  // Track multi-step guided creation state
   const [conversationContext, setConversationContext] = useState<ConversationContext | null>(null);
   const listRef = useRef<FlatList>(null);
 
@@ -152,17 +203,19 @@ export const ChatScreen = () => {
     scrollToBottom();
 
     try {
-      let result;
+      // Map history for contextual intent discovery
+      const history = messages.slice(-5).map(m => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.text
+      }));
 
-      if (conversationContext) {
-        // We're in the middle of a guided creation — pipe the answer through
-        result = await continueCreation(conversationContext, text.trim());
-      } else {
-        const intent = parseIntent(text.trim());
-        result = await executeIntent(intent);
-      }
+      const result = await executeIntent({ 
+        rawInput: text.trim(), 
+        action: 'unknown', 
+        entity: 'resource', 
+        params: {} 
+      }, history);
 
-      // Update context for next turn
       setConversationContext(result.nextContext ?? null);
 
       const botMsg: ChatMessage = {
@@ -188,20 +241,38 @@ export const ChatScreen = () => {
   }, [isLoading, scrollToBottom, conversationContext]);
 
   return (
-    <View style={styles.root}>
-      {/* Header */}
-      <LinearGradient
-        colors={THEME.colors.kineticGradient as any}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
-        <Bot size={22} color="white" />
-        <Text style={styles.headerTitle}>Azure AI Assistant</Text>
-        <View style={styles.headerBadge}>
-          <Text style={styles.headerBadgeText}>LIVE</Text>
+    <View className="flex-1 bg-surface font-body text-on-surface">
+      {/* Top AppBar */}
+      <View className="flex-row items-center justify-between px-6 pt-14 pb-4 bg-surface-container-lowest shadow-sm border-b border-outline-variant/10">
+        <View className="flex-row items-center gap-3">
+          <View className="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/20">
+            <Image source={{ uri: 'https://lh3.googleusercontent.com/a/default-user' }} className="w-full h-full" />
+          </View>
+          <View>
+             <Text className="text-xl font-extrabold text-on-surface tracking-tight leading-none font-headline">Azure Kinetic</Text>
+             <View className="flex-row items-center gap-1.5 mt-1.5">
+                <View className="w-2 h-2 rounded-full bg-primary-container animate-pulse shadow-[0_0_8px_#ff8c00]" />
+                <Text className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Neural Link: Active</Text>
+             </View>
+          </View>
         </View>
-      </LinearGradient>
+        <TouchableOpacity className="w-10 h-10 rounded-md bg-surface-container flex items-center justify-center active:scale-95 transition-all">
+           <Search size={18} color="#564334" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Hero Section from Design */}
+      {messages.length <= 1 && (
+        <View className="px-6 py-10 items-center">
+            <View className="px-4 py-1.5 rounded-full bg-orange-50 border border-orange-100 flex-row items-center gap-2 mb-6">
+                <View className="w-2 h-2 rounded-full bg-primary" />
+                <Text className="text-[10px] font-bold text-primary uppercase tracking-[0.1em]">Kinetic Intelligence Active</Text>
+            </View>
+            <Text className="text-4xl font-extrabold text-on-surface text-center tracking-tighter leading-[1.1] font-headline">
+                How can I architect your cloud today?
+            </Text>
+        </View>
+      )}
 
       {/* Messages */}
       <FlatList
@@ -210,239 +281,67 @@ export const ChatScreen = () => {
         keyExtractor={m => m.id}
         renderItem={({ item }) => <MessageBubble message={item} />}
         ListFooterComponent={isLoading ? <TypingIndicator /> : null}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={{ padding: 20, paddingBottom: 140 }}
         onLayout={scrollToBottom}
-        style={styles.list}
+        className="flex-1"
       />
-
-      {/* Suggestions */}
-      {messages.length <= 1 && (
-        <View style={styles.suggestions}>
-          <FlatList
-            horizontal
-            data={SUGGESTIONS}
-            keyExtractor={s => s}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 12 }}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.chip} onPress={() => sendMessage(item)}>
-                <ChevronRight size={12} color={THEME.colors.primary} style={{ marginRight: 4 }} />
-                <Text style={styles.chipText}>{item}</Text>
-              </TouchableOpacity>
-            )}
-          />
-        </View>
-      )}
 
       {/* Input Bar */}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.inputBar}>
-          <TextInput
-            style={styles.input}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="Ask Azure anything..."
-            placeholderTextColor={THEME.colors.onSurfaceVariant}
-            multiline
-            maxLength={500}
-            onSubmitEditing={() => sendMessage(inputText)}
-            returnKeyType="send"
-          />
-          <TouchableOpacity
-            style={[styles.sendBtn, (!inputText.trim() || isLoading) && styles.sendBtnDisabled]}
-            onPress={() => sendMessage(inputText)}
-            disabled={!inputText.trim() || isLoading}
-          >
-            {isLoading
-              ? <ActivityIndicator size="small" color="white" />
-              : <Send size={18} color="white" />
-            }
-          </TouchableOpacity>
+        <View className="px-6 pb-[110px] pt-4 bg-surface-container-lowest border-t border-outline-variant/10">
+          
+          {/* Suggestions Layer */}
+          {messages.length <= 1 && !inputText && (
+            <View>
+              <Text className="text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-[0.2em] mb-4 ml-1">Optimize Performance</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2 mb-6">
+                {SUGGESTIONS.map((item) => (
+                  <TouchableOpacity 
+                    key={item} 
+                    onPress={() => sendMessage(item)}
+                    className="bg-surface-container-high px-5 py-2.5 rounded-full border border-outline-variant/5 shadow-sm active:bg-orange-50 active:scale-95 transition-all"
+                  >
+                    <Text className="text-[10px] font-bold text-primary uppercase tracking-widest">{item}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Main Input area matching Design */}
+          <View className="flex-row items-center bg-surface-container-highest rounded-full p-1.5 shadow-kinetic border border-transparent focus-within:border-primary">
+             <TouchableOpacity className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center mr-2 active:scale-95 transition-all">
+                <Plus size={20} color="#564334" />
+             </TouchableOpacity>
+             
+             <TextInput
+               className="flex-1 text-sm font-medium text-on-surface min-h-[44px] max-h-32 px-3 outline-none border-0"
+               value={inputText}
+               onChangeText={setInputText}
+               placeholder="Ask Kinetic Intelligence..."
+               placeholderTextColor="#56433480"
+               multiline
+             />
+
+             <TouchableOpacity className="p-2 mr-1">
+                <Mic size={20} color="#564334" opacity={0.6} />
+             </TouchableOpacity>
+
+             <TouchableOpacity
+               onPress={() => sendMessage(inputText)}
+               disabled={!inputText.trim() || isLoading}
+               className={`w-12 h-12 rounded-full items-center justify-center transition-all ${!inputText.trim() || isLoading ? 'bg-surface-container' : 'bg-primary shadow-premium'}`}
+             >
+                {isLoading 
+                  ? <ActivityIndicator size="small" color="white" /> 
+                  : <Send size={20} color="white" />
+                }
+             </TouchableOpacity>
+          </View>
+          <Text className="text-[10px] text-center text-on-surface-variant/40 mt-3 font-medium">Kinetic AI can make mistakes. Verify critical infrastructure changes.</Text>
         </View>
       </KeyboardAvoidingView>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: THEME.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingTop: Platform.OS === 'ios' ? 52 : 16,
-    paddingBottom: 16,
-    gap: 10,
-  },
-  headerTitle: {
-    ...THEME.typography.h2,
-    color: 'white',
-    flex: 1,
-    fontSize: 17,
-  },
-  headerBadge: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  headerBadgeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  list: { flex: 1 },
-  listContent: { padding: 12, paddingBottom: 8 },
-  messageRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  messageRowUser: { flexDirection: 'row-reverse' },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  avatarUser: { backgroundColor: THEME.colors.primary },
-  avatarAssistant: {
-    backgroundColor: THEME.colors.surfaceContainerHighest || THEME.colors.surface,
-    borderWidth: 1,
-    borderColor: THEME.colors.primary,
-  },
-  bubble: {
-    maxWidth: '82%',
-    borderRadius: 16,
-    padding: 12,
-  },
-  bubbleUser: {
-    backgroundColor: THEME.colors.primary,
-    borderBottomRightRadius: 4,
-  },
-  bubbleAssistant: {
-    backgroundColor: THEME.colors.surfaceContainerLowest || THEME.colors.surface,
-    borderWidth: 1,
-    borderColor: THEME.colors.outlineVariant,
-    borderBottomLeftRadius: 4,
-  },
-  typingBubble: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-  },
-  msgText: {
-    ...THEME.typography.body,
-    lineHeight: 20,
-  },
-  timestamp: {
-    ...THEME.typography.label,
-    fontSize: 9,
-    opacity: 0.5,
-    marginTop: 6,
-  },
-
-  // Table
-  tableContainer: {
-    marginTop: 10,
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: THEME.colors.outlineVariant,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: THEME.colors.primary + '22',
-    padding: 6,
-  },
-  tableHeaderCell: {
-    flex: 1,
-    ...THEME.typography.label,
-    fontSize: 9,
-    color: THEME.colors.primary,
-    fontWeight: 'bold',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    padding: 6,
-  },
-  tableRowAlt: {
-    backgroundColor: THEME.colors.surfaceContainerLowest || 'rgba(255,255,255,0.03)',
-  },
-  tableCell: {
-    flex: 1,
-    ...THEME.typography.label,
-    fontSize: 10,
-    color: THEME.colors.onSurfaceVariant,
-  },
-  tableMore: {
-    ...THEME.typography.label,
-    fontSize: 10,
-    color: THEME.colors.primary,
-    textAlign: 'center',
-    padding: 6,
-  },
-
-  // Suggestions
-  suggestions: {
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: THEME.colors.outlineVariant,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: THEME.colors.surface,
-    borderWidth: 1,
-    borderColor: THEME.colors.primary + '55',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    marginRight: 8,
-  },
-  chipText: {
-    ...THEME.typography.label,
-    fontSize: 11,
-    color: THEME.colors.primary,
-  },
-
-  // Input
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    padding: 10,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 10,
-    backgroundColor: THEME.colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: THEME.colors.outlineVariant,
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    ...THEME.typography.body,
-    color: THEME.colors.onSurface,
-    backgroundColor: THEME.colors.surfaceContainerLowest || THEME.colors.background,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    maxHeight: 120,
-    borderWidth: 1,
-    borderColor: THEME.colors.outlineVariant,
-  },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: THEME.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendBtnDisabled: { opacity: 0.4 },
-});

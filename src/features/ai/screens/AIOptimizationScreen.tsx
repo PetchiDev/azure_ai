@@ -1,11 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { THEME } from '@/constants/theme';
-import { KineticCard } from '@/components/ui/KineticCard';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { analyzeBilling } from '../services/aiInsightService';
-import { AlertTriangle, Ghost, Sparkles, TrendingDown } from 'lucide-react-native';
+import { TriangleAlert, Ghost, Sparkles, TrendingDown, ArrowRight, Zap, Target, ShieldCheck } from 'lucide-react-native';
 import { useBilling, useResources } from '@/hooks/useAzure';
-
+import { LinearGradient } from 'expo-linear-gradient';
 
 export const AIOptimizationScreen = () => {
   const { data: billing, isLoading: loadingBilling } = useBilling();
@@ -20,188 +18,147 @@ export const AIOptimizationScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={THEME.colors.primary} />
-        <Text style={styles.loadingText}>Analyzing Cloud Infrastructure...</Text>
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" color="#904d00" />
+        <Text className="mt-4 text-sm font-bold text-primary uppercase tracking-widest">Analyzing Cloud Matrix...</Text>
       </View>
     );
   }
 
   if (!analysis) {
     return (
-      <View style={styles.center}>
-        <Sparkles size={48} color={THEME.colors.outlineVariant} />
-        <Text style={styles.emptyText}>No data available for AI analysis yet.</Text>
+      <View className="flex-1 items-center justify-center bg-background p-10">
+        <View className="w-20 h-20 rounded-full bg-slate-50 items-center justify-center mb-6">
+           <Sparkles size={40} color="#e0e3e5" />
+        </View>
+        <Text className="text-center text-sm font-bold text-on-surface-variant uppercase tracking-widest">
+           No signals detected for optimization yet
+        </Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Sparkles size={32} color={THEME.colors.primary} />
-        <Text style={styles.title}>AI Optimization</Text>
-        <Text style={styles.subtitle}>
-          Analysis of your Azure infrastructure usage and billing patterns.
+    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ paddingBottom: 120 }}>
+      {/* Header */}
+      <View className="px-6 pt-16 pb-8 bg-white border-b border-orange-50/10">
+        <View className="flex-row items-center gap-3 mb-2">
+           <Sparkles size={24} color="#904d00" />
+           <Text className="text-[10px] font-bold text-primary uppercase tracking-[3px]">Kinetic Engine</Text>
+        </View>
+        <Text className="text-3xl font-extrabold text-on-surface tracking-tight mb-2">AI Optimization</Text>
+        <Text className="text-sm font-medium text-on-surface-variant leading-relaxed">
+          Autonomous analysis of your infrastructure efficiency and billing patterns.
         </Text>
       </View>
 
-      <KineticCard variant="highest" style={styles.summaryCard}>
-        <TrendingDown size={24} color={THEME.colors.primary} />
-        <View style={styles.summaryText}>
-          <Text style={styles.summaryLabel}>POTENTIAL MONTHLY SAVINGS</Text>
-          <Text style={styles.summaryValue}>{analysis.totalOptimizable}</Text>
+      <View className="p-6">
+        {/* Summary Card */}
+        <LinearGradient
+          colors={['#904d00', '#ff8c00']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          className="rounded-3xl p-6 shadow-xl shadow-orange-900/30 mb-8"
+        >
+          <View className="flex-row items-center gap-4">
+             <View className="w-12 h-12 bg-white/20 rounded-2xl items-center justify-center">
+                <TrendingDown size={28} color="white" />
+             </View>
+             <View>
+                <Text className="text-[10px] font-bold text-white/70 uppercase tracking-widest mb-1">Potential Monthly Savings</Text>
+                <Text className="text-3xl font-extrabold text-white">{analysis.totalOptimizable}</Text>
+             </View>
+          </View>
+          
+          <View className="mt-6 flex-row items-center justify-between border-t border-white/10 pt-4">
+            <View className="flex-row items-center gap-2">
+               <Target size={14} color="white" />
+               <Text className="text-[10px] font-bold text-white uppercase tracking-tighter">Efficiency Target: 94%</Text>
+            </View>
+            <TouchableOpacity className="bg-white px-4 py-2 rounded-xl">
+               <Text className="text-[10px] font-bold text-primary">APPLY ALL</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+
+        {/* Alerts Section */}
+        <View className="mb-8">
+           <View className="flex-row items-center gap-2 mb-4">
+              <View className="w-1.5 h-1.5 rounded-full bg-error" />
+              <Text className="text-[10px] font-bold text-error uppercase tracking-widest">Over-billing Alerts</Text>
+           </View>
+           
+           {analysis.overbilling.length === 0 ? (
+               <View className="bg-white p-6 rounded-2xl border border-outline-variant/5 items-center">
+                  <ShieldCheck size={24} color="#4ade80" />
+                  <Text className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-tight">No anomalies detected</Text>
+               </View>
+           ) : (
+               analysis.overbilling.map((item: any) => (
+                 <View key={item.id} className="mb-4 bg-white rounded-2xl border border-outline-variant/10 overflow-hidden flex-row shadow-sm">
+                   <View className="w-1.5 bg-error" />
+                   <View className="flex-1 p-5">
+                      <View className="flex-row justify-between items-start mb-2">
+                         <View className="flex-row items-center gap-2 flex-1">
+                            <TriangleAlert size={16} color="#ba1a1a" />
+                            <Text className="text-sm font-bold text-on-surface" numberOfLines={1}>{item.name}</Text>
+                         </View>
+                         <Text className="text-sm font-bold text-error ml-2">{item.cost}</Text>
+                      </View>
+                      <Text className="text-xs font-medium text-on-surface-variant leading-relaxed">
+                        {item.reason}
+                      </Text>
+                      <TouchableOpacity className="mt-4 flex-row items-center gap-1">
+                         <Text className="text-[10px] font-bold text-primary uppercase">Optimize Resource</Text>
+                         <ArrowRight size={10} color="#904d00" />
+                      </TouchableOpacity>
+                   </View>
+                 </View>
+               ))
+           )}
         </View>
-      </KineticCard>
 
-      <Text style={styles.sectionTitle}>Over-billing Alerts</Text>
-      {analysis.overbilling.length === 0 ? (
-          <Text style={styles.itemMeta}>No over-billing alerts detected.</Text>
-      ) : (
-          analysis.overbilling.map((item: any) => (
-            <KineticCard key={item.id} hasAccent variant="high" style={styles.itemCard}>
-              <View style={styles.itemHeader}>
-                <AlertTriangle size={18} color={THEME.colors.error} />
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemCost}>{item.cost}</Text>
-              </View>
-              <Text style={styles.itemReason}>{item.reason}</Text>
-            </KineticCard>
-          ))
-      )}
-
-      <Text style={styles.sectionTitle}>Untagged / Idle Resources</Text>
-      {analysis.zombieResources.length === 0 ? (
-          <Text style={styles.itemMeta}>Infrastructure is well-organized.</Text>
-      ) : (
-          analysis.zombieResources.map((item: any) => (
-            <KineticCard key={item.id} variant="low" style={styles.itemCard}>
-              <View style={styles.itemHeader}>
-                <Ghost size={18} color={THEME.colors.onSurfaceVariant} />
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemType}>{item.type.split('/').pop()}</Text>
-              </View>
-              <KineticCard variant="highest" style={styles.actionCard}>
-                <TouchableOpacity>
-                  <Text style={styles.actionText}>ADD MANAGEMENT TAGS</Text>
-                </TouchableOpacity>
-              </KineticCard>
-            </KineticCard>
-          ))
-      )}
+        {/* Zombie Resources Section */}
+        <View>
+           <View className="flex-row items-center gap-2 mb-4">
+              <View className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+              <Text className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Idle Nodes Detected</Text>
+           </View>
+           
+           {analysis.zombieResources.length === 0 ? (
+                <View className="bg-white p-6 rounded-2xl border border-outline-variant/5 items-center">
+                   <Text className="text-xs font-bold text-slate-400 uppercase tracking-tight">Infrastructure sequence optimal</Text>
+                </View>
+           ) : (
+               analysis.zombieResources.map((item: any) => (
+                 <View key={item.id} className="mb-4 bg-white rounded-2xl border border-outline-variant/10 overflow-hidden flex-row shadow-sm">
+                   <View className="w-1.5 bg-slate-200" />
+                   <View className="flex-1 p-5">
+                      <View className="flex-row justify-between items-center mb-3">
+                         <View className="flex-row items-center gap-2 flex-1">
+                            <Ghost size={16} color="#515f74" />
+                            <Text className="text-sm font-bold text-on-surface" numberOfLines={1}>{item.name}</Text>
+                         </View>
+                         <View className="bg-slate-50 px-2 py-0.5 rounded">
+                            <Text className="text-[8px] font-bold text-slate-400 uppercase">{item.type.split('/').pop()}</Text>
+                         </View>
+                      </View>
+                      
+                      <View className="flex-row gap-2 mt-2">
+                         <TouchableOpacity className="flex-1 bg-orange-50 py-2.5 rounded-xl items-center">
+                            <Text className="text-[9px] font-bold text-primary uppercase">Audit Activity</Text>
+                         </TouchableOpacity>
+                         <TouchableOpacity className="flex-1 bg-slate-50 py-2.5 rounded-xl items-center">
+                            <Text className="text-[9px] font-bold text-on-surface-variant uppercase tracking-tighter">Decommission</Text>
+                         </TouchableOpacity>
+                      </View>
+                   </View>
+                 </View>
+               ))
+           )}
+        </View>
+      </View>
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: THEME.colors.background,
-  },
-  content: {
-    padding: THEME.spacing.xl,
-    paddingTop: 60,
-  },
-  header: {
-    marginBottom: THEME.spacing.xl,
-  },
-  title: {
-    ...THEME.typography.h1,
-    color: THEME.colors.onSurface,
-    marginTop: THEME.spacing.sm,
-  },
-  subtitle: {
-    ...THEME.typography.body,
-    color: THEME.colors.onSurfaceVariant,
-    fontSize: 14,
-  },
-  summaryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: THEME.spacing.lg,
-    backgroundColor: THEME.colors.primaryContainer,
-    marginBottom: THEME.spacing.xl,
-  },
-  summaryText: {
-    marginLeft: THEME.spacing.md,
-  },
-  summaryLabel: {
-    ...THEME.typography.label,
-    color: 'white',
-    fontSize: 10,
-    opacity: 0.8,
-  },
-  summaryValue: {
-    ...THEME.typography.h1,
-    color: 'white',
-    fontSize: 28,
-  },
-  sectionTitle: {
-    ...THEME.typography.label,
-    color: THEME.colors.primary,
-    marginBottom: THEME.spacing.md,
-    marginTop: THEME.spacing.sm,
-    letterSpacing: 2,
-  },
-  itemCard: {
-    marginBottom: THEME.spacing.md,
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: THEME.spacing.xs,
-  },
-  itemName: {
-    flex: 1,
-    ...THEME.typography.body,
-    fontWeight: '700',
-    color: THEME.colors.onSurface,
-    marginLeft: THEME.spacing.sm,
-  },
-  itemCost: {
-    color: THEME.colors.error,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  itemType: {
-    fontSize: 10,
-    color: THEME.colors.onSurfaceVariant,
-    textTransform: 'uppercase',
-  },
-  itemReason: {
-    fontSize: 13,
-    color: THEME.colors.onSurfaceVariant,
-    lineHeight: 18,
-  },
-  itemMeta: {
-    fontSize: 12,
-    color: THEME.colors.onSurfaceVariant,
-    marginBottom: THEME.spacing.md,
-  },
-  actionCard: {
-    marginTop: THEME.spacing.sm,
-    padding: THEME.spacing.sm,
-    alignItems: 'center',
-  },
-  actionText: {
-    ...THEME.typography.label,
-    color: THEME.colors.primary,
-    fontSize: 10,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: THEME.colors.background,
-  },
-  loadingText: {
-    marginTop: THEME.spacing.md,
-    ...THEME.typography.body,
-    color: THEME.colors.primary,
-  },
-  emptyText: {
-    marginTop: THEME.spacing.md,
-    ...THEME.typography.body,
-    color: THEME.colors.onSurfaceVariant,
-  },
-});

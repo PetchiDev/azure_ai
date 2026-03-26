@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import { THEME } from '@/constants/theme';
-import { KineticCard } from '@/components/ui/KineticCard';
-import { Box, Layers, Database, Cpu, Plus, Pencil, Trash2, RefreshCcw } from 'lucide-react-native';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, TextInput, ScrollView } from 'react-native';
+import { Server, Database, Box, Plus, Pencil, Trash2, RefreshCcw, Search, SlidersHorizontal, Layers, Zap, Info, ChevronRight, Activity, GitBranch } from 'lucide-react-native';
 import { ResourceFormSheet } from '../components/ResourceFormSheet';
 import { DeleteConfirmationModal } from '@/components/common/DeleteConfirmationModal';
 import { useResources, useDeleteResource } from '@/hooks/useAzure';
 
-
-const ICON_SIZE = 20;
-
 export const ResourceListScreen = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'apps' | 'blobs' | 'functions'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const { data: resources = [], isLoading, refetch } = useResources();
   const deleteMutation = useDeleteResource();
   
@@ -19,19 +15,23 @@ export const ResourceListScreen = () => {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [selectedResource, setSelectedResource] = useState<any>(null);
 
-  const filteredResources = activeTab === 'all' 
-    ? resources 
-    : resources.filter((r: any) => {
-        if (activeTab === 'apps') return r.type === 'sites' && r.kind?.includes('app');
-        if (activeTab === 'functions') return r.kind?.includes('functionapp');
-        if (activeTab === 'blobs') return r.type === 'storageaccounts';
-        return false;
-      });
+  const filteredResources = resources.filter((r: any) => {
+    const matchesTab = activeTab === 'all' 
+      || (activeTab === 'apps' && r.type === 'sites' && r.kind?.includes('app'))
+      || (activeTab === 'functions' && r.kind?.includes('functionapp'))
+      || (activeTab === 'blobs' && r.type === 'storageaccounts');
+    
+    const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase())
+      || r.type.toLowerCase().includes(searchQuery.toLowerCase());
 
-  const renderIcon = (type: string) => {
-    if (type.includes('site')) return <Layers size={ICON_SIZE} color={THEME.colors.primary} />;
-    if (type.includes('storage')) return <Database size={ICON_SIZE} color={THEME.colors.secondary} />;
-    return <Box size={ICON_SIZE} color={THEME.colors.tertiary} />;
+    return matchesTab && matchesSearch;
+  });
+
+  const getResourceIcon = (type: string) => {
+    if (type.includes('site')) return <Layers size={20} color="#904d00" />;
+    if (type.includes('storage')) return <Database size={20} color="#00658f" />;
+    if (type.includes('function')) return <Zap size={20} color="#ff8c00" />;
+    return <Box size={20} color="#515f74" />;
   };
 
   const handleAdd = () => {
@@ -58,83 +58,146 @@ export const ResourceListScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Text style={styles.title}>Resources</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity onPress={() => refetch()} style={styles.iconButton}>
-              <RefreshCcw size={20} color={THEME.colors.onSurface} strokeWidth={2.5} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleAdd} style={styles.addButton}>
-              <Plus size={24} color="white" />
-            </TouchableOpacity>
-          </View>
+    <View className="flex-1 bg-background">
+      {/* Header */}
+      <View className="px-6 pt-14 pb-8 bg-surface-container-lowest border-b border-outline-variant/10 shadow-sm">
+        <View className="flex-row justify-between items-center mb-6">
+          <Text className="text-4xl font-extrabold tracking-tight text-on-surface font-headline">Resources</Text>
+          <TouchableOpacity 
+            onPress={() => refetch()} 
+            className="w-10 h-10 rounded-md bg-surface-container flex items-center justify-center active:scale-90 transition-all"
+          >
+            <RefreshCcw size={20} color="#904d00" strokeWidth={2.5} />
+          </TouchableOpacity>
         </View>
-        <View style={styles.tabs}>
-          {['all', 'apps', 'blobs', 'functions'].map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => setActiveTab(tab as any)}
-              style={[styles.tab, activeTab === tab && styles.activeTab]}
-            >
-              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                {tab.toUpperCase()}
-              </Text>
-            </TouchableOpacity>
-          ))}
+
+        {/* Recessed Search Bar */}
+        <View className="flex-row items-center bg-surface-container-highest px-4 py-3 rounded-md mb-8 border border-transparent">
+          <Search size={18} color="#564334" opacity={0.5} className="mr-3" />
+          <TextInput 
+            className="flex-1 text-sm font-medium text-on-surface"
+            placeholder="Search nodes, types, regions..."
+            placeholderTextColor="#56433480"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          <TouchableOpacity className="p-1">
+             <SlidersHorizontal size={18} color="#904d00" />
+          </TouchableOpacity>
+        </View>
+
+        {/* 2x2 Filter Grid */}
+        <View className="gap-3">
+          <View className="flex-row gap-3">
+            {[
+              { id: 'all', label: 'All Resources', icon: Layers },
+              { id: 'apps', label: 'Compute', icon: Server },
+            ].map((tab) => (
+              <TouchableOpacity
+                key={tab.id}
+                onPress={() => setActiveTab(tab.id as any)}
+                className={`flex-1 flex-row items-center gap-3 p-4 rounded-md border ${activeTab === tab.id ? 'bg-primary-fixed border-primary' : 'bg-surface-container border-outline-variant/10'}`}
+              >
+                <tab.icon size={18} color={activeTab === tab.id ? '#904d00' : '#564334'} />
+                <Text className={`text-xs font-bold uppercase tracking-widest ${activeTab === tab.id ? 'text-primary' : 'text-on-surface-variant'}`}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View className="flex-row gap-3">
+            {[
+              { id: 'blobs', label: 'Storage', icon: Database },
+              { id: 'functions', label: 'Serverless', icon: Zap },
+            ].map((tab) => (
+              <TouchableOpacity
+                key={tab.id}
+                onPress={() => setActiveTab(tab.id as any)}
+                className={`flex-1 flex-row items-center gap-3 p-4 rounded-md border ${activeTab === tab.id ? 'bg-primary-fixed border-primary' : 'bg-surface-container border-outline-variant/10'}`}
+              >
+                <tab.icon size={18} color={activeTab === tab.id ? '#904d00' : '#564334'} />
+                <Text className={`text-xs font-bold uppercase tracking-widest ${activeTab === tab.id ? 'text-primary' : 'text-on-surface-variant'}`}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       </View>
 
+      {/* List */}
       {isLoading && resources.length === 0 ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={THEME.colors.primary} size="large" />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#904d00" size="large" />
         </View>
       ) : (
         <FlatList
           data={filteredResources}
           keyExtractor={(item) => item.id}
+          className="flex-1"
+          contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
           refreshControl={
-            <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={THEME.colors.primary} />
+            <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#904d00" />
           }
           renderItem={({ item }) => (
-            <KineticCard hasAccent variant="high" style={styles.card}>
-              <View style={styles.cardContent}>
-                <View style={styles.iconContainer}>
-                  {renderIcon(item.type)}
+            <TouchableOpacity 
+              className="mb-4 bg-surface-container-lowest rounded-md shadow-kinetic border border-outline-variant/10 overflow-hidden flex-row active:bg-surface-container-low transition-all"
+              onPress={() => handleEdit(item)}
+            >
+              {/* Status Blade */}
+              <View className="w-1.5 bg-primary-container" />
+              
+              <View className="flex-1 p-5 flex-row items-center">
+                <View className="w-12 h-12 rounded-md bg-surface-container flex items-center justify-center mr-4">
+                  {getResourceIcon(item.type)}
                 </View>
-                <View style={styles.info}>
-                  <Text style={styles.resourceName} numberOfLines={1}>{item.name}</Text>
-                  <Text style={styles.resourceMeta}>{item.location} • {item.type}</Text>
+                
+                <View className="flex-1">
+                   <Text className="text-sm font-bold text-on-surface mb-0.5" numberOfLines={1}>{item.name}</Text>
+                   <View className="flex-row items-center gap-2">
+                      <Text className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-tighter">
+                        {item.location}
+                      </Text>
+                      <View className="w-1 h-1 rounded-full bg-outline-variant/30" />
+                      <Text className="text-[10px] font-bold text-primary uppercase tracking-tighter">
+                         {item.type.split('/').pop()}
+                      </Text>
+                   </View>
                 </View>
-                <View style={styles.actions}>
-                  <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionButton}>
-                    <Pencil size={16} color={THEME.colors.onSurfaceVariant} />
-                  </TouchableOpacity>
+
+                <View className="flex-row items-center gap-2">
                   <TouchableOpacity 
                     onPress={() => handleDeletePress(item)} 
-                    style={styles.actionButton}
+                    className="p-2 rounded-md bg-error-container/20 active:bg-error-container/40"
                     disabled={deleteMutation.isPending}
                   >
-                    {deleteMutation.isPending && selectedResource?.id === item.id ? (
-                        <ActivityIndicator size="small" color={THEME.colors.error} />
-                    ) : (
-                        <Trash2 size={16} color={THEME.colors.error} />
-                    )}
+                    <Trash2 size={16} color="#ba1a1a" />
                   </TouchableOpacity>
-                  <View style={styles.statusHealthy} />
+                  <ChevronRight size={18} color="#e0e3e5" />
                 </View>
               </View>
-            </KineticCard>
+            </TouchableOpacity>
           )}
-          contentContainerStyle={styles.list}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No real resources found in this subscription.</Text>
+            <View className="py-20 items-center justify-center">
+              <View className="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center mb-4">
+                 <Layers size={24} color="#564334" opacity={0.2} />
+              </View>
+              <Text className="text-xs font-bold text-on-surface-variant uppercase tracking-widest text-center opacity-40">
+                No Kinetic nodes detected in current scope
+              </Text>
             </View>
           }
         />
       )}
+
+      {/* FAB */}
+      <TouchableOpacity 
+        onPress={handleAdd}
+        className="absolute bottom-6 right-6 w-16 h-16 rounded-full bg-primary items-center justify-center shadow-xl shadow-orange-900/40 active:scale-95 transition-all"
+      >
+        <Plus size={32} color="white" />
+      </TouchableOpacity>
 
       <ResourceFormSheet
         isVisible={isFormVisible}
@@ -154,129 +217,3 @@ export const ResourceListScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: THEME.colors.background,
-  },
-  header: {
-    padding: THEME.spacing.xl,
-    paddingTop: 60,
-    backgroundColor: THEME.colors.surfaceContainerLowest,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: THEME.spacing.lg,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: THEME.spacing.md,
-  },
-  title: {
-    ...THEME.typography.h1,
-    color: THEME.colors.onSurface,
-  },
-  addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: THEME.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: THEME.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  iconButton: {
-    padding: THEME.spacing.xs,
-  },
-  tabs: {
-    flexDirection: 'row',
-    gap: THEME.spacing.sm,
-  },
-  tab: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: THEME.borderRadius.full,
-    backgroundColor: THEME.colors.surfaceContainer,
-  },
-  activeTab: {
-    backgroundColor: THEME.colors.primary,
-  },
-  tabText: {
-    ...THEME.typography.label,
-    fontSize: 10,
-    color: THEME.colors.onSurfaceVariant,
-  },
-  activeTabText: {
-    color: 'white',
-  },
-  list: {
-    padding: THEME.spacing.md,
-  },
-  card: {
-    marginBottom: THEME.spacing.sm,
-  },
-  cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: THEME.borderRadius.md,
-    backgroundColor: THEME.colors.surfaceContainerLow,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: THEME.spacing.md,
-  },
-  info: {
-    flex: 1,
-  },
-  resourceName: {
-    ...THEME.typography.body,
-    fontWeight: '600',
-    color: THEME.colors.onSurface,
-  },
-  resourceMeta: {
-    fontSize: 12,
-    color: THEME.colors.onSurfaceVariant,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: THEME.spacing.sm,
-  },
-  actionButton: {
-    padding: THEME.spacing.xs,
-    borderRadius: THEME.borderRadius.sm,
-    backgroundColor: THEME.colors.surfaceContainerLow,
-  },
-  statusHealthy: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#4ade80',
-    marginLeft: THEME.spacing.xs,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyContainer: {
-    padding: THEME.spacing.xl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    ...THEME.typography.body,
-    color: THEME.colors.onSurfaceVariant,
-    fontSize: 12,
-    textAlign: 'center',
-  },
-});

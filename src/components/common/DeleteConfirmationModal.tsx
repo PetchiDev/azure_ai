@@ -1,7 +1,6 @@
 import React from 'react';
-import { Modal, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Modal, View, Text, TouchableOpacity } from 'react-native';
 import { TriangleAlert, X } from 'lucide-react-native';
-import { THEME } from '../../constants/theme';
 import { KineticButton } from '../ui/KineticButton';
 
 interface DeleteConfirmationModalProps {
@@ -11,13 +10,6 @@ interface DeleteConfirmationModalProps {
   title: string;
   description: string;
   resourceName: string;
-}
-
-interface GlassContainerProps {
-  children: React.ReactNode;
-  intensity?: number;
-  tint?: 'dark' | 'light' | 'default';
-  style?: ViewStyle; // Explicitly type style as ViewStyle
 }
 
 export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
@@ -30,125 +22,45 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
 }) => {
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <View style={styles.iconContainer}>
-              <TriangleAlert size={32} color={THEME.colors.error} />
+      <View className="flex-1 bg-slate-900/90 justify-center items-center px-10">
+        <View className="w-full max-w-[400px] bg-white rounded-[32px] overflow-hidden shadow-2xl border border-outline-variant/5">
+          <View className="p-8 items-center justify-center relative">
+            <View className="w-20 h-20 rounded-full bg-red-50 items-center justify-center mb-6">
+              <TriangleAlert size={40} color="#ba1a1a" />
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <X size={20} color={THEME.colors.onSurfaceVariant} />
+            <TouchableOpacity onPress={onClose} className="absolute right-6 top-6 p-2 rounded-full bg-slate-50">
+              <X size={18} color="#515f74" />
             </TouchableOpacity>
-          </View>
-
-          <View style={styles.body}>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.description}>
-              {description} {' '}
-              <Text style={styles.resourceName}>{resourceName}</Text> will be permanently deleted.
+            
+            <Text className="text-2xl font-bold text-on-surface text-center mb-2">{title}</Text>
+            <Text className="text-sm font-medium text-on-surface-variant text-center leading-relaxed">
+              {description}
             </Text>
-          </View>
-
-          <View style={styles.footer}>
-            <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-            <KineticButton
-              title="Delete Everything"
-              onPress={onConfirm}
-              variant="primary"
-              style={styles.deleteButton}
-            />
+            <View className="mt-4 bg-slate-50 px-4 py-2 rounded-xl">
+               <Text className="text-xs font-bold text-slate-500 font-mono tracking-tighter">{resourceName}</Text>
+            </View>
+            
+            <View className="w-full mt-8 flex-row gap-3">
+              <TouchableOpacity 
+                onPress={onClose} 
+                className="flex-1 h-14 bg-slate-100 rounded-2xl justify-center items-center active:bg-slate-200"
+              >
+                <Text className="text-sm font-bold text-on-surface-variant uppercase tracking-widest">Abort</Text>
+              </TouchableOpacity>
+              <View className="flex-[1.5]">
+                 <KineticButton
+                   title="Erase Node"
+                   onPress={onConfirm}
+                   variant="primary"
+                   style={{ backgroundColor: '#ba1a1a' } as any}
+                 />
+              </View>
+            </View>
+            
+            <Text className="mt-6 text-[10px] font-bold text-error uppercase tracking-widest opacity-40">IRREVERSIBLE SEQUENCE</Text>
           </View>
         </View>
       </View>
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: THEME.spacing.lg,
-  },
-  content: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: THEME.colors.surfaceContainer,
-    borderRadius: THEME.borderRadius.xl,
-    borderWidth: 1,
-    borderColor: '#FFFFFF33',
-    overflow: 'hidden',
-  },
-  header: {
-    padding: THEME.spacing.lg,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: THEME.colors.error + '1A',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeButton: {
-    position: 'absolute',
-    right: THEME.spacing.md,
-    top: THEME.spacing.md,
-  },
-  body: {
-    paddingHorizontal: THEME.spacing.lg,
-    alignItems: 'center',
-    marginBottom: THEME.spacing.lg,
-  },
-  title: {
-    fontFamily: THEME.typography.fontFamily,
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: THEME.spacing.xs,
-    textAlign: 'center',
-  },
-  description: {
-    fontFamily: THEME.typography.fontFamily,
-    fontSize: 14,
-    color: THEME.colors.onSurfaceVariant,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  resourceName: {
-    fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: 'monospace',
-  },
-  footer: {
-    padding: THEME.spacing.lg,
-    flexDirection: 'row',
-    gap: THEME.spacing.sm,
-  },
-  cancelButton: {
-    flex: 1,
-    height: 48,
-    borderRadius: THEME.borderRadius.lg,
-    backgroundColor: THEME.colors.surfaceContainerHighest,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cancelText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  deleteButton: {
-    flex: 1,
-    height: 48,
-    backgroundColor: THEME.colors.error,
-  },
-});

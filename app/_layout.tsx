@@ -47,14 +47,34 @@ export default function RootLayout() {
     if (!hash || !hash.includes('access_token')) return;
     const params = new URLSearchParams(hash.replace('#', '?'));
     const token = params.get('access_token');
+    
     if (token) {
-      useAuthStore.getState().setCredentials({
-        tenantId: process.env.EXPO_PUBLIC_AZURE_TENANT_ID || '',
-        clientId: process.env.EXPO_PUBLIC_AZURE_CLIENT_ID || '',
-        subscriptionId: process.env.EXPO_PUBLIC_AZURE_SUBSCRIPTION_ID || '',
-        accessToken: token,
-        user: { name: 'Azure User', email: 'azure@enterprise.com' }
-      });
+      const handleDiscovery = async () => {
+        let subId = process.env.EXPO_PUBLIC_AZURE_SUBSCRIPTION_ID || '';
+        if (!subId) {
+          try {
+            const subRes = await fetch('https://management.azure.com/subscriptions?api-version=2022-12-01', {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await subRes.json();
+            if (data.value?.length > 0) {
+              subId = data.value[0].subscriptionId;
+            }
+          } catch (e) {
+            console.error('Root discovery failed', e);
+          }
+        }
+
+        useAuthStore.getState().setCredentials({
+          tenantId: process.env.EXPO_PUBLIC_AZURE_TENANT_ID || '',
+          clientId: process.env.EXPO_PUBLIC_AZURE_CLIENT_ID || '',
+          subscriptionId: subId,
+          accessToken: token,
+          user: { name: 'Azure User', email: 'azure@enterprise.com' }
+        });
+      };
+      
+      handleDiscovery();
       window.history.replaceState(null, '', window.location.pathname);
     }
   }, []);

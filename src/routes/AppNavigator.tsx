@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { LinkingOptions } from '@react-navigation/native';
@@ -34,34 +35,57 @@ export const linking: LinkingOptions<any> = {
 
 const MainTabs = () => (
   <Tab.Navigator
-    screenOptions={{
+    screenOptions={({ route }) => ({
       headerShown: false,
+      tabBarActiveTintColor: '#904d00',
+      tabBarInactiveTintColor: '#515f7466',
       tabBarStyle: {
-        backgroundColor: THEME.colors.surfaceContainerLowest,
-        borderTopWidth: 0,
-        height: 60,
-        paddingBottom: 10,
+        position: 'absolute',
+        bottom: 24,
+        left: 20,
+        right: 20,
+        elevation: 10,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        borderRadius: 24,
+        height: 72,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+        paddingBottom: 8,
+        paddingTop: 8,
+        shadowColor: '#904d00',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
       },
-      tabBarActiveTintColor: THEME.colors.primary,
-      tabBarInactiveTintColor: THEME.colors.onSurfaceVariant,
       tabBarLabelStyle: {
-        ...THEME.typography.label,
         fontSize: 10,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginTop: 4,
       },
-    }}
+    })}
   >
     <Tab.Screen
       name="Dashboard"
       component={DashboardScreen}
       options={{
-        tabBarIcon: ({ color }) => <LayoutDashboard size={21} color={color} />,
+        tabBarIcon: ({ color, focused }) => (
+          <View className={`p-2 rounded-xl ${focused ? 'bg-orange-50' : ''}`}>
+             <LayoutDashboard size={20} color={color} />
+          </View>
+        ),
       }}
     />
     <Tab.Screen
       name="Resources"
       component={ResourceListScreen}
       options={{
-        tabBarIcon: ({ color }) => <Layers size={21} color={color} />,
+        tabBarIcon: ({ color, focused }) => (
+          <View className={`p-2 rounded-xl ${focused ? 'bg-orange-50' : ''}`}>
+             <Layers size={20} color={color} />
+          </View>
+        ),
       }}
     />
     <Tab.Screen
@@ -69,7 +93,11 @@ const MainTabs = () => (
       component={AIOptimizationScreen}
       options={{
         tabBarLabel: 'AI',
-        tabBarIcon: ({ color }) => <Sparkles size={21} color={color} />,
+        tabBarIcon: ({ color, focused }) => (
+          <View className={`p-2 rounded-xl ${focused ? 'bg-orange-50' : ''}`}>
+             <Sparkles size={20} color={color} />
+          </View>
+        ),
       }}
     />
     <Tab.Screen
@@ -77,7 +105,11 @@ const MainTabs = () => (
       component={ChatScreen}
       options={{
         tabBarLabel: 'Chat',
-        tabBarIcon: ({ color }) => <MessageCircle size={21} color={color} />,
+        tabBarIcon: ({ color, focused }) => (
+          <View className={`p-2 rounded-xl ${focused ? 'bg-orange-50' : ''}`}>
+             <MessageCircle size={20} color={color} />
+          </View>
+        ),
       }}
     />
   </Tab.Navigator>

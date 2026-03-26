@@ -1,7 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { TouchableOpacity, Text, ViewStyle, TextStyle, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { THEME } from '../../constants/theme';
 
 interface KineticButtonProps {
   title: string;
@@ -24,90 +23,40 @@ export const KineticButton: React.FC<KineticButtonProps> = ({
     return (
       <TouchableOpacity
         onPress={onPress}
-        style={[styles.container, style, disabled && styles.disabled]}
         disabled={disabled}
+        className={`rounded-md overflow-hidden min-h-[52px] justify-center items-center shadow-premium active:scale-95 transition-all ${disabled ? 'opacity-50' : ''}`}
+        style={style}
       >
         <LinearGradient
-          colors={THEME.colors.kineticGradient as any}
+          colors={['#904d00', '#ff8c00']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.gradient}
+          className="w-full h-full items-center justify-center px-8"
         >
-          <Text style={[styles.text, styles.primaryText, textStyle]}>{title}</Text>
+          <Text className="text-white text-sm font-bold uppercase tracking-widest text-center" style={textStyle}>
+            {title}
+          </Text>
         </LinearGradient>
       </TouchableOpacity>
     );
   }
 
+  const isOutline = variant === 'outline';
+  
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={[
-        styles.container,
-        variant === 'outline' ? styles.outline : styles.secondary,
-        style,
-        disabled && styles.disabled,
-      ]}
       disabled={disabled}
+      className={`rounded-md min-h-[52px] justify-center items-center px-8 active:scale-95 transition-all ${isOutline ? 'border border-outline-variant/20 bg-white' : 'bg-primary-fixed/40'} ${disabled ? 'opacity-50' : ''}`}
+      style={style}
     >
-      <Text
-        style={[
-          styles.text,
-          variant === 'outline' ? styles.outlineText : styles.secondaryText,
-          textStyle,
-          disabled && styles.disabledText,
-        ]}
+      <Text 
+        className={`text-sm font-bold uppercase tracking-widest text-center text-primary`}
+        style={textStyle}
       >
         {title}
       </Text>
     </TouchableOpacity>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: THEME.borderRadius.lg,
-    overflow: 'hidden',
-    minHeight: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  gradient: {
-    paddingVertical: THEME.spacing.md,
-    paddingHorizontal: THEME.spacing.xl,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondary: {
-    backgroundColor: THEME.colors.surfaceContainerHigh,
-    paddingVertical: THEME.spacing.md,
-    paddingHorizontal: THEME.spacing.xl,
-  },
-  outline: {
-    borderWidth: 1,
-    borderColor: THEME.colors.outlineVariant,
-    paddingVertical: THEME.spacing.md,
-    paddingHorizontal: THEME.spacing.xl,
-  },
-  text: {
-    ...THEME.typography.label,
-    textAlign: 'center',
-  },
-  primaryText: {
-    color: THEME.colors.onPrimary,
-  },
-  secondaryText: {
-    color: THEME.colors.onSurface,
-  },
-  outlineText: {
-    color: THEME.colors.onSurfaceVariant,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  disabledText: {
-    opacity: 0.8,
-  },
-});
 

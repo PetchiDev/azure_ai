@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, TextInput, StyleSheet, ViewStyle, TextInputProps } from 'react-native';
-import { THEME } from '../../constants/theme';
+import { View, Text, TextInput, ViewStyle, TextInputProps } from 'react-native';
 
 interface KineticInputProps extends TextInputProps {
   label?: string;
@@ -10,35 +9,28 @@ interface KineticInputProps extends TextInputProps {
 export const KineticInput: React.FC<KineticInputProps> = ({
   label,
   containerStyle,
+  onFocus,
+  onBlur,
   ...props
 }) => {
+  const [isFocused, setIsFocused] = React.useState(false);
+
   return (
-    <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+    <View className="mb-4" style={containerStyle}>
+      {label && <Text className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 ml-1">{label}</Text>}
       <TextInput
-        style={styles.input}
-        placeholderTextColor={`${THEME.colors.outline}80`}
+        className={`bg-surface-container-highest rounded-md p-4 text-sm font-medium text-on-surface border-2 ${isFocused ? 'border-primary' : 'border-transparent'}`}
+        placeholderTextColor="#56433480"
+        onFocus={(e) => {
+          setIsFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setIsFocused(false);
+          onBlur?.(e);
+        }}
         {...props}
       />
     </View>
   );
 };
-
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: THEME.spacing.md,
-  },
-  label: {
-    ...THEME.typography.label,
-    color: THEME.colors.onSurfaceVariant,
-    marginBottom: THEME.spacing.xs,
-  },
-  input: {
-    backgroundColor: THEME.colors.surfaceContainerLow,
-    borderRadius: THEME.borderRadius.md,
-    padding: THEME.spacing.md,
-    color: THEME.colors.onSurface,
-    ...THEME.typography.body,
-  },
-});

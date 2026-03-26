@@ -24,6 +24,8 @@ import {
   createSqlDatabase,
   createGenericResource,
   registerResourceProvider,
+  getGenericResource,
+  updateGenericResource,
 } from '@/api/services/azureService';
 
 
@@ -207,240 +209,23 @@ async function executeCreation(entity: string, params: Record<string, string>): 
 
 // ── Main execute intent function ─────────────────────────────────────────────
 
-export async function executeIntent(intent: ParsedIntent): Promise<ExecutorResult> {
-  const { action, entity, params, rawInput } = intent;
+import backendClient from '@/api/backendClient';
 
-  // ── REGISTER (Priority) ───────────────────────────
-  if (rawInput.toLowerCase().includes('register')) {
-    const namespace = rawInput.match(/register\s+([a-zA-Z0-9\.]+)/i)?.[1];
-    if (namespace) {
-      await registerResourceProvider(namespace);
-      return { summary: `✅ Registration request for **${namespace}** has been sent. This usually takes 1-2 minutes to complete.` };
-    }
-  }
+export async function executeIntent(intent: ParsedIntent, history: { role: string, content: string }[] = []): Promise<ExecutorResult> {
+  const { rawInput } = intent;
 
   try {
-    // ── LIST / SHOW ──────────────────────────────────
-    if (action === 'list' || action === 'show') {
-      switch (entity) {
-        case 'resource-group': {
-          const data = await getResourceGroups();
-          return {
-            summary: `Found **${data?.length ?? 0}** resource groups in your subscription.`,
-            data: data?.map((rg: any) => ({
-              name: rg.name,
-              location: rg.location,
-              state: rg.properties?.provisioningState,
-            })),
-          };
-        }
-        case 'blob': {
-          const data = await getStorageAccounts();
-          return {
-            summary: `Found **${data?.length ?? 0}** storage accounts in your subscription.`,
-            data: data?.map((s: any) => ({ name: s.name, location: s.location, rg: s.id?.split('/')?.[4] })),
-          };
-        }
-        case 'function': {
-          const data = await getFunctionApps();
-          return {
-            summary: `Found **${data?.length ?? 0}** function apps.`,
-            data: data?.map((f: any) => ({ name: f.name, state: f.properties?.state, location: f.location })),
-          };
-        }
-        case 'app-registration': {
-          const data = await getAppRegistrations();
-          return {
-            summary: `Found **${data?.length ?? 0}** app registrations.`,
-            data: data?.map((a: any) => ({ name: a.displayName, appId: a.appId, objectId: a.id })),
-          };
-        }
-        case 'database': {
-          const data = await getSqlDatabases();
-          return {
-            summary: `Found **${data?.length ?? 0}** SQL Servers.`,
-            data: data?.map((s: any) => ({ name: s.name, location: s.location })),
-          };
-        }
-        case 'universal': {
-          const type = params.provider;
-          const service = params.serviceKeyword || 'resource';
-          const resources = await getResources();
-          const filtered = resources?.filter((r: any) => r.type?.toLowerCase().includes(type?.toLowerCase() || ''));
-          return {
-            summary: `Found **${filtered?.length ?? 0}** ${service} resources.`,
-            data: filtered?.map((r: any) => ({ name: r.name, location: r.location, type: r.type })),
-          };
-        }
-        case 'metrics': {
-          // If a name is provided, show metrics for it
-          if (params.name) {
-            const resources = await getResources();
-            const target = resources?.find((r: any) => r.name?.toLowerCase() === params.name?.toLowerCase());
-            if (target) {
-              const data = await getResourceMetrics(target.id);
-              return {
-                summary: `📈 **CPU Usage** metrics for **${target.name}** (last 1h).`,
-                data: data?.[0]?.timeseries?.[0]?.data?.map((d: any) => ({ time: new Date(d.timeStamp).toLocaleTimeString(), value: d.average + '%' })) || [],
-              };
-            }
-          }
-          return { summary: '⚠️ Please specify a resource name to show metrics for. _(e.g., "show metrics for myvm")_' };
-        }
-        case 'resource': {
-          const data = await getResources();
-          return {
-            summary: `Found **${data?.length ?? 0}** resources in your subscription.`,
-            data: data?.slice(0, 15).map((r: any) => ({ name: r.name, type: r.type, location: r.location })),
-          };
-        }
-        case 'user-access': {
-          const data = await getRoleAssignments();
-          return {
-            summary: `Found **${data?.length ?? 0}** role assignments.`,
-            data: data?.slice(0, 10).map((r: any) => ({
-              principal: r.properties?.principalId,
-              role: r.properties?.roleDefinitionId?.split('/')?.pop(),
-              scope: r.properties?.scope,
-            })),
-          };
-        }
-        case 'logs': {
-          const data = await getActivityLogs();
-          return {
-            summary: `Showing **${data?.length ?? 0}** recent activity log entries (last 30 days).`,
-            data: data?.slice(0, 10).map((l: any) => ({
-              operation: l.operationName?.localizedValue || l.operationName?.value,
-              status: l.status?.value,
-              caller: l.caller,
-              time: l.eventTimestamp,
-            })),
-          };
-        }
-        case 'subscription': {
-          const data = await getSubscriptions();
-          return {
-            summary: `Found **${data?.length ?? 0}** subscriptions.`,
-            data: data?.map((s: any) => ({ name: s.displayName, id: s.subscriptionId, state: s.state })),
-          };
-        }
-        default: break;
-      }
-    }
+    const response = await backendClient.post('/api/assistant/interact', {
+      prompt: rawInput,
+      history
+    });
 
-    // ── CHECK / BILLING ──────────────────────────────
-    if (action === 'check' || entity === 'billing') {
-      const data = await getBillingDetails();
-      const rows = data?.properties?.rows ?? [];
-      const total = rows.reduce((acc: number, r: any[]) => acc + (parseFloat(r[1]) || 0), 0);
-      return {
-        summary: `💰 Current month estimated cost: **$${total.toFixed(2)} USD**${data?.isSimulated ? '\n_Note: Billing API restricted — showing resource-based estimate._' : ''}`,
-        data: rows.map((r: any[]) => ({ resourceGroup: r[0], cost: `$${parseFloat(r[1]).toFixed(2)}`, currency: r[2] })),
-      };
-    }
-
-    // ── CREATE ───────────────────────────────────────
-    if (action === 'create') {
-      const entityKey = entity === 'resource' && params.type ? params.type : entity;
-      const allFields = CREATION_FIELDS[entityKey] ?? ['name', 'resourceGroup', 'location'];
-      const missing = allFields.filter(f => !params[f]);
-
-      if (missing.length > 0) {
-        // Start guided creation
-        return startGuidedCreation(entityKey, params);
-      }
-      // All params already in the sentence — execute directly
-      return executeCreation(entityKey, params);
-    }
-
-    // ── DELETE ───────────────────────────────────────
-    if (action === 'delete') {
-      if (!params.name) {
-        return { summary: '⚠️ Please specify the resource name. Example: _"delete resource group named my-rg"_' };
-      }
-
-      // Resource Group delete — uses name directly (name case-insensitive)
-      if (entity === 'resource-group') {
-        const rgs = await getResourceGroups();
-        const target = rgs?.find((r: any) => r.name?.toLowerCase() === params.name?.toLowerCase());
-        if (!target) {
-          return { summary: `❌ Could not find resource group **${params.name}** in your subscription.\n\nTip: Use _"list all resource groups"_ to see exact names.` };
-        }
-        await deleteResourceGroup(target.name);
-        return { summary: `✅ Resource group **${target.name}** deletion initiated. Azure is removing it — this may take a minute.` };
-      }
-
-      // Generic resource delete (VMs, apps, storage, etc.) — needs ARM ID lookup
-      const resources = await getResources();
-      const target = resources?.find((r: any) => r.name?.toLowerCase() === params.name?.toLowerCase());
-      if (!target) {
-        return { summary: `❌ Could not find any resource named **${params.name}**.\n\nTip: Use _"list all resources"_ or _"list all resource groups"_ to see exact names.` };
-      }
-      await deleteResource(target.id);
-      return { summary: `✅ Resource **${params.name}** (${target.type}) has been deleted.` };
-    }
-
-    // ── UPDATE ───────────────────────────────────────
-    if (action === 'update') {
-      if (!params.name) {
-        return { summary: '⚠️ Please specify the resource name to update. Example: _"tag resource myStorage with owner=anna"_ or _"scale web app myApp to Standard"_' };
-      }
-
-      // Case 1: Tagging
-      if (params.tagKey && params.tagValue) {
-        const resources = await getResources();
-        const target = resources?.find((r: any) => r.name?.toLowerCase() === params.name?.toLowerCase());
-        if (!target) return { summary: `❌ Could not find resource **${params.name}** to tag.` };
-
-        await updateResourceTags(target.id, { [params.tagKey]: params.tagValue });
-        return {
-          summary: `✅ Resource **${target.name}** updated with tag: **${params.tagKey}=${params.tagValue}**.`,
-          data: [{ name: target.name, tag: `${params.tagKey}=${params.tagValue}` }],
-        };
-      }
-
-      // Case 2: Scaling (Web App)
-      if (params.sku && entity === 'webapp') {
-        const resources = await getResources();
-        const target = resources?.find((r: any) => r.name?.toLowerCase() === params.name?.toLowerCase());
-        if (!target) return { summary: `❌ Could not find web app **${params.name}** to scale.` };
-
-        // Scale the associated App Service Plan (usually named plan-name or we look it up)
-        // For simplicity, we assume the plan is in the same RG
-        const rg = target.id?.split('/')?.[4];
-        // Web apps often have a plan ID in properties
-        // But for now, we'll try to scale the plan named like the app if not found
-        const planName = `${target.name}-plan`; 
-        await updateAppServicePlan(rg, planName, params.sku);
-        return {
-          summary: `✅ Web App **${target.name}** scaled to plan: **${params.sku}**.`,
-          data: [{ app: target.name, plan: planName, newSku: params.sku }],
-        };
-      }
-
-      return { summary: '⚠️ I understood you want to update, but I need more details (like tags or a new scale/sku).' };
-    }
-
-    // ── FALLBACK ─────────────────────────────────────
-    return {
-      summary: `🤔 I wasn't sure how to handle that. Here are things I can help with:\n\n• _"list all resources"_\n• _"create storage account"_\n• _"create function app"_\n• _"check billing"_\n• _"show activity logs"_\n• _"who has access"_`,
-    };
+    return response.data;
   } catch (err: any) {
-    const errorData = err?.response?.data?.error;
-    const errorMsg = errorData?.message || err?.message || 'Unknown error';
-    const errorCode = errorData?.code || '';
-    const isMissingReg = errorCode === 'MissingSubscriptionRegistration' || errorMsg.includes('MissingSubscriptionRegistration');
-
-    if (isMissingReg) {
-      const namespace = errorMsg.match(/namespace '([^']+)'/)?.[1] || 'Microsoft.Storage';
-      return {
-        summary: `❌ **Missing Registration**: Your subscription is not registered for **${namespace}**.\n\n**To fix this, type**: _"register provider ${namespace}"_`,
-        isError: true,
-      };
-    }
+    console.error('Backend Integration Error:', err);
     return {
-      summary: `❌ Azure error: ${errorMsg}`,
-      isError: true,
+      summary: "❌ I'm having trouble connecting to my Assistant Core. Please ensure the backend is running.",
+      isError: true
     };
   }
 }

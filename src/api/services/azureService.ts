@@ -100,12 +100,11 @@ export const getBillingDetails = async () => {
     const isSupported = BILLING_SUPPORTED_OFFERS.some(id => offerId.includes(id));
 
     if (!isSupported) {
-      console.info(`Subscription offer "${offerId}" does not support Cost Management/Consumption APIs. Using resource-based simulation.`);
-      return generateResourceBasedBilling();
+      console.info(`Subscription offer "${offerId}" does not support Cost Management/Consumption APIs.`);
+      return null;
     }
   } catch {
-    // If we can't check, fallback to simulation to avoid crashing
-    return generateResourceBasedBilling();
+    return null;
   }
 
   // Step 2: Only call billing APIs for supported subscription types
@@ -121,7 +120,7 @@ export const getBillingDetails = async () => {
     });
     return response.data;
   } catch {
-    return generateResourceBasedBilling();
+    return null;
   }
 };
 
@@ -325,10 +324,25 @@ export const createGenericResource = async (type: string, name: string, resource
   return response.data;
 };
 
-// Register Resource Provider
+// Resource Providers
 export const registerResourceProvider = async (namespace: string) => {
   const response = await apiClient.post(
     `/subscriptions/{subscriptionId}/providers/${namespace}/register?api-version=2021-04-01`
+  );
+  return response.data;
+};
+
+// Generic Resource Fetcher
+export const getGenericResource = async (resourceId: string) => {
+  const response = await apiClient.get(`${resourceId}?api-version=2021-04-01`);
+  return response.data;
+};
+
+// Generic Resource Updater
+export const updateGenericResource = async (resourceId: string, properties: any) => {
+  const response = await apiClient.patch(
+    `${resourceId}?api-version=2021-04-01`,
+    { properties }
   );
   return response.data;
 };

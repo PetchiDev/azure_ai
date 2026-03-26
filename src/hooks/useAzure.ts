@@ -13,15 +13,24 @@ export const useSubscriptions = () => {
 export const useResources = () => {
   return useQuery({
     queryKey: [QUERY_KEYS.RESOURCES],
-    queryFn: azureService.getResources,
-    select: (data) => (data || []).map((res: any) => ({
-      ...res,
-      id: res.id,
-      name: res.name || res.displayName,
-      type: res.type.split('/').pop().toLowerCase(),
-      status: 'Healthy',
-      location: res.location,
-    })),
+    queryFn: async () => {
+      const [resources, groups] = await Promise.all([
+        azureService.getResources(),
+        azureService.getResourceGroups(),
+      ]);
+      return [...(groups || []), ...(resources || [])];
+    },
+    select: (data) => (data || []).map((res: any) => {
+      const isRG = !res.type || res.type.toLowerCase().includes('resourcegroups');
+      return {
+        ...res,
+        id: res.id,
+        name: res.name || res.displayName,
+        type: isRG ? 'Resource Group' : res.type.split('/').pop().toLowerCase(),
+        status: 'Healthy',
+        location: res.location,
+      };
+    }),
   });
 };
 

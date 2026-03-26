@@ -1,47 +1,37 @@
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, Platform, StyleSheet, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { THEME } from '../../constants/theme';
 
 interface GlassContainerProps {
   children: React.ReactNode;
   intensity?: number;
   tint?: 'dark' | 'light' | 'default';
-  style?: any;
+  style?: ViewStyle;
+  className?: string;
 }
 
 export const GlassContainer: React.FC<GlassContainerProps> = ({
   children,
-  intensity = 20,
-  tint = 'dark',
+  intensity = 80,
+  tint = 'light',
   style,
 }) => {
   return (
-    <View style={[styles.container, style]}>
+    <View 
+      className="rounded-3xl overflow-hidden bg-transparent"
+      style={style}
+    >
       {Platform.OS !== 'web' ? (
         <BlurView intensity={intensity} tint={tint} style={StyleSheet.absoluteFill}>
-          <View style={styles.overlay} />
+          <View className="absolute inset-0 bg-white/40" />
         </BlurView>
       ) : (
-        <View style={[styles.webOverlay, { backgroundColor: THEME.colors.surfaceContainer + 'CC' }]} />
+        <View 
+          className="absolute inset-0 bg-white/80" 
+          style={{ backdropFilter: 'blur(24px)' } as any} 
+        />
       )}
       {children}
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: THEME.borderRadius.xl,
-    overflow: 'hidden',
-    backgroundColor: 'transparent',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: THEME.colors.surfaceContainer + '40', // 25% opacity
-  },
-  webOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backdropFilter: 'blur(20px)',
-  },
-});
