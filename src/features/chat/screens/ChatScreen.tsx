@@ -11,11 +11,13 @@ import {
   Image,
   ScrollView,
 } from 'react-native';
+import { useAuthStore } from '../../../store/useAuthStore';
+import { useRouter } from 'expo-router';
 import { ChatMessage, ConversationContext } from '../types/chat.types';
 import { parseIntent } from '../services/chatIntentParser';
 import { executeIntent, continueCreation } from '../services/chatAzureExecutor';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Send, Bot, User, ChevronRight, Sparkles, Plus, Search, MessageSquare, Globe, Cpu, Zap, Activity, Info, CircleAlert, CircleCheck, Mic } from 'lucide-react-native';
+import { Send, Bot, User, ChevronRight, Sparkles, Plus, Search, MessageSquare, Globe, Cpu, Zap, Activity, Info, CircleAlert, CircleCheck, Mic, LogOut } from 'lucide-react-native';
 
 const SUGGESTIONS = [
   'Empty storage accounts?',
@@ -177,11 +179,45 @@ function TypingIndicator() {
 
 // ── Main Screen ────────────────────────────────────────────────────────
 export const ChatScreen = () => {
+  const router = useRouter();
+  const { user, accessToken, logout } = useAuthStore();
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationContext, setConversationContext] = useState<ConversationContext | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
   const listRef = useRef<FlatList>(null);
+
+  const getInitials = () => {
+    if (accessToken) {
+      try {
+        const payload = accessToken.split('.')[1];
+        if (payload) {
+          const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+          const decoded = typeof atob !== 'undefined' ? atob(base64) : Buffer.from(base64, 'base64').toString('utf8');
+          const parsed = JSON.parse(decoded);
+          if (parsed.given_name || parsed.family_name) {
+             const g = parsed.given_name?.[0] || '';
+             const f = parsed.family_name?.[0] || '';
+             return (g + f).toUpperCase();
+          }
+        }
+      } catch (e) {}
+    }
+    // Fallback
+    const name = user?.name;
+    if (!name) return 'U';
+    const parts = name.split(/[. _-]/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/'); // Redirect to login
+  };
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
@@ -243,22 +279,44 @@ export const ChatScreen = () => {
   return (
     <View className="flex-1 bg-surface font-body text-on-surface">
       {/* Top AppBar */}
-      <View className="flex-row items-center justify-between px-6 pt-14 pb-4 bg-surface-container-lowest shadow-sm border-b border-outline-variant/10">
-        <View className="flex-row items-center gap-3">
-          <View className="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/20">
-            <Image source={{ uri: 'https://lh3.googleusercontent.com/a/default-user' }} className="w-full h-full" />
-          </View>
-          <View>
-             <Text className="text-xl font-extrabold text-on-surface tracking-tight leading-none font-headline">Azure Kinetic</Text>
-             <View className="flex-row items-center gap-1.5 mt-1.5">
-                <View className="w-2 h-2 rounded-full bg-primary-container animate-pulse shadow-[0_0_8px_#ff8c00]" />
-                <Text className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">Neural Link: Active</Text>
-             </View>
+      <View className="flex-row items-center justify-between px-6 pt-14 pb-4 bg-surface-container-lowest shadow-sm border-b border-outline-variant/10 z-50">
+        {/* Left: Logo */}
+        <View className="flex-row items-center">
+           <Image 
+             source={require('../../../assets/images/logo.svg')} 
+             style={{ width: 120, height: 28 }} 
+             resizeMode="contain" 
+           />
+        </View>
+        
+        {/* Right: Avatar & Dropdown */}
+        <View className="flex-row items-center gap-4 relative">
+          <TouchableOpacity className="w-10 h-10 rounded-md bg-surface-container flex items-center justify-center active:scale-95 transition-all">
+             <Search size={18} color="#564334" />
+          </TouchableOpacity>
+          
+          <View className="relative">
+            <TouchableOpacity 
+              onPress={() => setShowDropdown(!showDropdown)}
+              className="w-10 h-10 rounded-full bg-primary flex items-center justify-center overflow-hidden border border-outline-variant/20 shadow-sm active:scale-95 transition-all"
+            >
+              <Text className="text-white font-bold text-lg tracking-widest">{getInitials()}</Text>
+            </TouchableOpacity>
+
+            {/* Dropdown Menu */}
+            {showDropdown && (
+              <View className="absolute top-12 right-0 w-36 bg-surface-container-lowest border border-outline-variant/10 rounded-md shadow-premium overflow-hidden z-50">
+                <TouchableOpacity 
+                  onPress={handleLogout}
+                  className="w-full flex-row items-center gap-3 px-4 py-3 bg-error-container/10 active:bg-error-container/30 transition-all border-l-2 border-error"
+                >
+                  <LogOut size={16} color="#ba1a1a" />
+                  <Text className="text-sm font-bold text-error">Logout</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
-        <TouchableOpacity className="w-10 h-10 rounded-md bg-surface-container flex items-center justify-center active:scale-95 transition-all">
-           <Search size={18} color="#564334" />
-        </TouchableOpacity>
       </View>
 
       {/* Hero Section from Design */}

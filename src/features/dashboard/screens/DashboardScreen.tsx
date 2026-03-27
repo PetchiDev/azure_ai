@@ -1,16 +1,50 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Image, ActivityIndicator } from 'react-native';
-import { LayoutDashboard, Layers, Bot, Gauge, Cloud, Search, SlidersHorizontal, Server, GitBranch, CreditCard, Bolt, User, TriangleAlert, CircleCheck, Database, Network, Shield, Terminal, ChevronRight, Activity, Menu, Zap } from 'lucide-react-native';
+import { useAuthStore } from '../../../store/useAuthStore';
+import { LayoutDashboard, Layers, Bot, Gauge, Cloud, Search, SlidersHorizontal, Server, GitBranch, CreditCard, Bolt, User, TriangleAlert, CircleCheck, Database, Network, Shield, Terminal, ChevronRight, Activity, Menu, Zap, LogOut } from 'lucide-react-native';
 import { useResources, useBilling, useActivities } from '@/hooks/useAzure';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export const DashboardScreen = () => {
   const router = useRouter();
+  const { user, accessToken, logout } = useAuthStore();
   const { data: resources = [], isLoading: loadingResources, refetch: refetchResources } = useResources();
   const { data: billing, isLoading: loadingBilling } = useBilling();
   const { data: activities = [], isLoading: loadingActivities } = useActivities();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const getInitials = () => {
+    if (accessToken) {
+      try {
+        const payload = accessToken.split('.')[1];
+        if (payload) {
+          const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+          const decoded = typeof atob !== 'undefined' ? atob(base64) : Buffer.from(base64, 'base64').toString('utf8');
+          const parsed = JSON.parse(decoded);
+          if (parsed.given_name || parsed.family_name) {
+             const g = parsed.given_name?.[0] || '';
+             const f = parsed.family_name?.[0] || '';
+             return (g + f).toUpperCase();
+          }
+        }
+      } catch (e) {}
+    }
+    // Fallback
+    const name = user?.name;
+    if (!name) return 'U';
+    const parts = name.split(/[. _-]/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/'); // Redirect to login
+  };
 
   const onRefresh = async () => {
     setIsRefreshing(true);
@@ -47,16 +81,44 @@ export const DashboardScreen = () => {
   return (
     <View className="flex-1 bg-surface font-body text-on-surface">
       {/* TopAppBar */}
-      <View className="sticky top-0 z-50 w-full bg-surface-container-lowest border-b border-outline-variant/10 shadow-sm px-6 pt-14 pb-4 flex-row items-center justify-between">
-        <View className="flex-row items-center gap-4">
-          <View className="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/20">
-            <Image source={{ uri: 'https://lh3.googleusercontent.com/a/default-user' }} className="w-full h-full" />
-          </View>
-          <Text className="text-xl font-extrabold text-on-surface tracking-tight font-headline">Azure Kinetic</Text>
+      <View className="sticky top-0 z-50 w-full bg-surface-container-lowest border-b border-outline-variant/10 shadow-sm px-6 pt-14 pb-4 flex-row items-center justify-between z-50">
+        {/* Left: Logo */}
+        <View className="flex-row items-center">
+          <Image 
+            source={require('../../../assets/images/logo.svg')} 
+            style={{ width: 120, height: 28 }} 
+            resizeMode="contain" 
+          />
         </View>
-        <TouchableOpacity className="w-10 h-10 flex items-center justify-center rounded-md active:scale-95 transition-all">
-          <Menu size={24} color="#f35325" />
-        </TouchableOpacity>
+        
+        {/* Right: Menu & Avatar Dropdown */}
+        <View className="flex-row items-center gap-4 relative">
+          <TouchableOpacity className="w-10 h-10 flex items-center justify-center rounded-md active:scale-95 transition-all">
+            <Menu size={24} color="#f35325" />
+          </TouchableOpacity>
+          
+          <View className="relative">
+            <TouchableOpacity 
+              onPress={() => setShowDropdown(!showDropdown)}
+              className="w-10 h-10 rounded-full bg-primary flex items-center justify-center overflow-hidden border border-outline-variant/20 shadow-sm active:scale-95 transition-all"
+            >
+              <Text className="text-white font-bold text-lg tracking-widest">{getInitials()}</Text>
+            </TouchableOpacity>
+
+            {/* Dropdown Menu */}
+            {showDropdown && (
+              <View className="absolute top-12 right-0 w-36 bg-surface-container-lowest border border-outline-variant/10 rounded-md shadow-premium overflow-hidden z-50">
+                <TouchableOpacity 
+                  onPress={handleLogout}
+                  className="w-full flex-row items-center gap-3 px-4 py-3 bg-error-container/10 active:bg-error-container/30 transition-all border-l-2 border-error"
+                >
+                  <LogOut size={16} color="#ba1a1a" />
+                  <Text className="text-sm font-bold text-error">Logout</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
       </View>
 
       <ScrollView 
