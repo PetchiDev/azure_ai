@@ -1,31 +1,26 @@
 import { Platform } from 'react-native';
-import { MMKV } from 'react-native-mmkv';
-
-
-
-// Native storage instance (only initialized on native)
-const mmkv = Platform.OS !== 'web' ? new (require('react-native-mmkv').MMKV)() : null;
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const unifiedStorage = {
-  setItem: (name: string, value: string) => {
+  setItem: async (name: string, value: string) => {
     if (Platform.OS === 'web') {
       localStorage.setItem(name, value);
     } else {
-      mmkv?.set(name, value);
+      await AsyncStorage.setItem(name, value);
     }
   },
-  getItem: (name: string) => {
+  getItem: async (name: string) => {
     if (Platform.OS === 'web') {
       return localStorage.getItem(name);
     } else {
-      return mmkv?.getString(name) ?? null;
+      return await AsyncStorage.getItem(name) ?? null;
     }
   },
-  removeItem: (name: string) => {
+  removeItem: async (name: string) => {
     if (Platform.OS === 'web') {
       localStorage.removeItem(name);
     } else {
-      mmkv?.delete(name);
+      await AsyncStorage.removeItem(name);
     }
   },
 };

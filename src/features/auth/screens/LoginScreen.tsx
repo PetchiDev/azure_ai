@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Platform, Image } from 'react-native';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as msalService from '../../../services/msalService';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
 import * as AuthSession from 'expo-auth-session';
@@ -25,102 +24,82 @@ export const LoginScreen = () => {
   });
 
   // Web Auth Request
+  // Auth Request configuration
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
       clientId: clientId || process.env.EXPO_PUBLIC_AZURE_CLIENT_ID!,
       scopes: ['https://management.azure.com/user_impersonation', 'offline_access', 'openid', 'profile'],
       redirectUri: AuthSession.makeRedirectUri({
         scheme: 'app',
+        preferLocalhost: Platform.OS === 'web',
       }),
       responseType: AuthSession.ResponseType.Token,
+      state: 'azure-kinetic-auth-session-state', // Fixed state prevents CSRF mismatch after app re-mount
+      extraParams: {
+        prompt: 'select_account', // Forces user to select an account even if already logged in
+      },
     },
     { authorizationEndpoint: `https://login.microsoftonline.com/${tenantId || 'common'}/oauth2/v2.0/authorize` }
   );
 
-  useEffect(() => {
-    const handleWebSuccess = async (accessToken: string) => {
-      let subId = subscriptionId || process.env.EXPO_PUBLIC_AZURE_SUBSCRIPTION_ID || '';
-      if (!subId) {
-        try {
-          const subRes = await axios.get('https://management.azure.com/subscriptions?api-version=2022-12-01', {
-            headers: { Authorization: `Bearer ${accessToken}` }
-          });
-          if (subRes.data.value?.length > 0) {
-            subId = subRes.data.value[0].subscriptionId;
-          }
-        } catch (e) {
-          console.error('Web discovery failed', e);
-        }
-      }
-
-      await setCredentials({
-        tenantId: tenantId || process.env.EXPO_PUBLIC_AZURE_TENANT_ID!,
-        clientId: clientId || process.env.EXPO_PUBLIC_AZURE_CLIENT_ID!,
-        subscriptionId: subId,
-        accessToken: accessToken,
-        user: { name: 'Azure Web User', email: 'web@azure.com' }
-      });
-      router.replace('/dashboard' as any);
-    };
-
-    if (response?.type === 'success') {
-      const { access_token } = response.params;
-      if (access_token) {
-        handleWebSuccess(access_token);
-      } else {
-        setError('No access token received. Check Azure App Registration.');
-      }
-    } else if (response?.type === 'error') {
-      setError(response.error?.message || 'Authentication error');
-    }
-  }, [response]);
+  // Note: We'll handle the result directly from promptAsync() to avoid state mismatch issues
+  // commonly seen with the response variable in Expo Go + Tunnel environments.
 
   const handleMicrosoftSignIn = async () => {
     setLoading(true);
     setError(null);
     try {
-      let accessToken = '';
-      let user = { name: 'Azure User', email: '' };
-
-      if (Platform.OS === 'web') {
-        // AuthSession handles redirect, handled in useEffect
-        await promptAsync();
+      if (!request) {
+        setError('Auth request not initialized. Check your credentials.');
+        setLoading(false);
         return;
-      } else {
-        const result = await msalService.signInInteractive();
-        accessToken = result.accessToken;
-        user = {
-          name: result.account.name || '',
-          email: result.account.username || '',
-        };
       }
-
-      // Discover Subscription if not provided
-      let subId = subscriptionId || process.env.EXPO_PUBLIC_AZURE_SUBSCRIPTION_ID || '';
-      if (!subId && accessToken) {
-        try {
-          const subRes = await axios.get('https://management.azure.com/subscriptions?api-version=2022-12-01', {
-            headers: { Authorization: `Bearer ${accessToken}` }
-          });
-          if (subRes.data.value?.length > 0) {
-            subId = subRes.data.value[0].subscriptionId;
+      
+      const result = await promptAsync();
+      console.log('Auth Result Type:', result.type);
+      
+      if (result.type === 'success') {
+        const { access_token } = result.params;
+        if (access_token) {
+          console.log('Login successful, processing token...');
+          
+          let subId = subscriptionId || process.env.EXPO_PUBLIC_AZURE_SUBSCRIPTION_ID || '';
+          if (!subId) {
+            try {
+              const subRes = await axios.get('https://management.azure.com/subscriptions?api-version=2022-12-01', {
+                headers: { Authorization: `Bearer ${access_token}` }
+              });
+              if (subRes.data.value?.length > 0) {
+                subId = subRes.data.value[0].subscriptionId;
+              }
+            } catch (e) {
+              console.error('Subscription discovery failed', e);
+            }
           }
-        } catch (e) {
-          console.error('Discovery failed', e);
-        }
-      }
 
-      await setCredentials({
-        tenantId: tenantId || process.env.EXPO_PUBLIC_AZURE_TENANT_ID!,
-        clientId: clientId || process.env.EXPO_PUBLIC_AZURE_CLIENT_ID!,
-        subscriptionId: subId,
-        accessToken,
-        user
-      });
-      router.replace('/dashboard' as any);
+          await setCredentials({
+            tenantId: tenantId || process.env.EXPO_PUBLIC_AZURE_TENANT_ID!,
+            clientId: clientId || process.env.EXPO_PUBLIC_AZURE_CLIENT_ID!,
+            subscriptionId: subId,
+            accessToken: access_token,
+            user: { name: 'Azure User', email: 'user@azure.com' }
+          });
+          
+          router.replace('/dashboard' as any);
+        } else {
+          setError('No access token received.');
+          setLoading(false);
+        }
+      } else if (result.type === 'cancel') {
+        setLoading(false);
+      } else if (result.type === 'error') {
+        console.error('Auth Error:', result.error);
+        setError(result.error?.message || 'Authentication failed');
+        setLoading(false);
+      }
     } catch (err: any) {
+      console.error('Sign-in Exception:', err);
       setError(err.message || 'Authentication failed');
-    } finally {
       setLoading(false);
     }
   };
@@ -168,13 +147,13 @@ export const LoginScreen = () => {
 
   return (
     <View className="flex-1 bg-surface font-body text-on-surface">
-      <ScrollView 
-        className="flex-1" 
+      <ScrollView
+        className="flex-1"
         contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 16 }}
       >
         {/* Auth Shell Suppression: No BottomNavBar or TopAppBar */}
         <View className="w-full max-w-[420px] flex flex-col items-center">
-          
+
           {/* Logo Section */}
           <View className="mb-12 flex flex-col items-center text-center">
             <View className="relative mb-6">
@@ -193,7 +172,7 @@ export const LoginScreen = () => {
                 <Text className="text-on-tertiary-container text-[12px] font-bold">⚡</Text>
               </View>
             </View>
-            
+
             <Text className="text-3xl font-extrabold tracking-tighter text-on-surface mb-2 font-headline">
               Azure Kinetic
             </Text>
@@ -212,7 +191,7 @@ export const LoginScreen = () => {
             </View>
 
             {/* Microsoft Sign-In Action */}
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={handleMicrosoftSignIn}
               disabled={loading}
               className={`w-full flex-row items-center justify-center gap-3 py-4 px-6 rounded-md bg-white border border-surface-variant shadow-sm active:scale-95 transition-all ${loading ? 'opacity-50' : ''}`}
@@ -248,7 +227,7 @@ export const LoginScreen = () => {
                   <Text className="text-xs text-on-surface-variant leading-normal">Your connection is secured via Azure Active Directory with hardware-level encryption.</Text>
                 </View>
               </View>
-              
+
               <View className="flex-row items-start gap-4 p-3 rounded-md bg-surface-container">
                 <View className="mt-1">
                   <Terminal size={20} color="#00658f" />
