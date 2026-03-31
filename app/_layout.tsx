@@ -7,9 +7,8 @@ import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 import 'react-native-reanimated';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AppNavigator, linking } from '../src/routes/AppNavigator';
 import { useColorScheme } from '@/components/useColorScheme';
-import { NavigationContainer, NavigationIndependentTree } from '@react-navigation/native';
+import { Stack } from 'expo-router';
 import { useAuthStore } from '@/store/useAuthStore';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -96,11 +95,17 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <NavigationIndependentTree>
-        <NavigationContainer linking={linking}>
-          <AppNavigator />
-        </NavigationContainer>
-      </NavigationIndependentTree>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ presentation: 'card' }} />
+
+        <Stack.Screen name="resource/[id]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="order" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="success" options={{ presentation: 'fullScreenModal' }} />
+      </Stack>
     </ThemeProvider>
   );
 }
+
+
+

@@ -54,15 +54,15 @@ export const LoginScreen = () => {
         setLoading(false);
         return;
       }
-      
+
       const result = await promptAsync();
       console.log('Auth Result Type:', result.type);
-      
+
       if (result.type === 'success') {
         const { access_token } = result.params;
         if (access_token) {
           console.log('Login successful, processing token...');
-          
+
           let subId = subscriptionId || process.env.EXPO_PUBLIC_AZURE_SUBSCRIPTION_ID || '';
           if (!subId) {
             try {
@@ -84,7 +84,7 @@ export const LoginScreen = () => {
             accessToken: access_token,
             user: { name: 'Azure User', email: 'user@azure.com' }
           });
-          
+
           router.replace('/dashboard' as any);
         } else {
           setError('No access token received.');

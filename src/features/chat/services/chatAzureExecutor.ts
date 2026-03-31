@@ -209,7 +209,8 @@ async function executeCreation(entity: string, params: Record<string, string>): 
 
 // ── Main execute intent function ─────────────────────────────────────────────
 
-import backendClient from '@/api/backendClient';
+import backendClient from '../../../api/backendClient';
+
 
 export async function executeIntent(intent: ParsedIntent, history: { role: string, content: string }[] = []): Promise<ExecutorResult> {
   const { rawInput } = intent;

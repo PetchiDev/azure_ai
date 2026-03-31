@@ -7,6 +7,9 @@ import { THEME } from '@/constants/theme';
 import { LoginScreen } from '@/features/auth/screens/LoginScreen';
 import { DashboardScreen } from '@/features/dashboard/screens/DashboardScreen';
 import { ResourceListScreen } from '@/features/resources/screens/ResourceListScreen';
+import { ResourceDetailScreen } from '@/features/resources/screens/ResourceDetailScreen';
+import { OrderFlowScreen } from '@/features/resources/screens/OrderFlowScreen';
+import { OrderSuccessScreen } from '@/features/resources/screens/OrderSuccessScreen';
 import { AIOptimizationScreen } from '@/features/ai/screens/AIOptimizationScreen';
 import { ChatScreen } from '@/features/chat/screens/ChatScreen';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -29,6 +32,9 @@ export const linking: LinkingOptions<any> = {
           Chat: 'chat',
         },
       },
+      ResourceDetail: 'resource/:id',
+      OrderFlow: 'order',
+      OrderSuccess: 'success',
     },
   },
 };
@@ -123,7 +129,12 @@ export const AppNavigator = () => {
       {!isAuthenticated ? (
         <Stack.Screen name="Login" component={LoginScreen} />
       ) : (
-        <Stack.Screen name="Main" component={MainTabs} />
+        <>
+          <Stack.Screen name="Main" component={MainTabs} />
+          <Stack.Screen name="ResourceDetail" component={ResourceDetailScreen} />
+          <Stack.Screen name="OrderFlow" component={OrderFlowScreen} />
+          <Stack.Screen name="OrderSuccess" component={OrderSuccessScreen} />
+        </>
       )}
     </Stack.Navigator>
   );

@@ -5,22 +5,23 @@ import { ResourceFormSheet } from '../components/ResourceFormSheet';
 import { DeleteConfirmationModal } from '@/components/common/DeleteConfirmationModal';
 import { useResources, useDeleteResource } from '@/hooks/useAzure';
 
-export const ResourceListScreen = () => {
+export const ResourceListScreen = ({ navigation }: { navigation: any }) => {
+
   const [activeTab, setActiveTab] = useState<'all' | 'apps' | 'blobs' | 'functions'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const { data: resources = [], isLoading, refetch } = useResources();
   const deleteMutation = useDeleteResource();
-  
+
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [selectedResource, setSelectedResource] = useState<any>(null);
 
   const filteredResources = resources.filter((r: any) => {
-    const matchesTab = activeTab === 'all' 
+    const matchesTab = activeTab === 'all'
       || (activeTab === 'apps' && r.type === 'sites' && r.kind?.includes('app'))
       || (activeTab === 'functions' && r.kind?.includes('functionapp'))
       || (activeTab === 'blobs' && r.type === 'storageaccounts');
-    
+
     const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase())
       || r.type.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -63,8 +64,8 @@ export const ResourceListScreen = () => {
       <View className="px-6 pt-14 pb-8 bg-surface-container-lowest border-b border-outline-variant/10 shadow-sm">
         <View className="flex-row justify-between items-center mb-6">
           <Text className="text-4xl font-extrabold tracking-tight text-on-surface font-headline">Resources</Text>
-          <TouchableOpacity 
-            onPress={() => refetch()} 
+          <TouchableOpacity
+            onPress={() => refetch()}
             className="w-10 h-10 rounded-md bg-surface-container flex items-center justify-center active:scale-90 transition-all"
           >
             <RefreshCcw size={20} color="#904d00" strokeWidth={2.5} />
@@ -74,7 +75,7 @@ export const ResourceListScreen = () => {
         {/* Recessed Search Bar */}
         <View className="flex-row items-center bg-surface-container-highest px-4 py-3 rounded-md mb-8 border border-transparent">
           <Search size={18} color="#564334" opacity={0.5} className="mr-3" />
-          <TextInput 
+          <TextInput
             className="flex-1 text-sm font-medium text-on-surface"
             placeholder="Search nodes, types, regions..."
             placeholderTextColor="#56433480"
@@ -82,7 +83,7 @@ export const ResourceListScreen = () => {
             onChangeText={setSearchQuery}
           />
           <TouchableOpacity className="p-1">
-             <SlidersHorizontal size={18} color="#904d00" />
+            <SlidersHorizontal size={18} color="#904d00" />
           </TouchableOpacity>
         </View>
 
@@ -140,34 +141,35 @@ export const ResourceListScreen = () => {
             <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#904d00" />
           }
           renderItem={({ item }) => (
-            <TouchableOpacity 
+            <TouchableOpacity
               className="mb-4 bg-surface-container-lowest rounded-md shadow-kinetic border border-outline-variant/10 overflow-hidden flex-row active:bg-surface-container-low transition-all"
-              onPress={() => handleEdit(item)}
+              onPress={() => navigation.navigate('resource/[id]', { id: item.id, resource: item })}
+
             >
               {/* Status Blade */}
               <View className="w-1.5 bg-primary-container" />
-              
+
               <View className="flex-1 p-5 flex-row items-center">
                 <View className="w-12 h-12 rounded-md bg-surface-container flex items-center justify-center mr-4">
                   {getResourceIcon(item.type)}
                 </View>
-                
+
                 <View className="flex-1">
-                   <Text className="text-sm font-bold text-on-surface mb-0.5" numberOfLines={1}>{item.name}</Text>
-                   <View className="flex-row items-center gap-2">
-                      <Text className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-tighter">
-                        {item.location}
-                      </Text>
-                      <View className="w-1 h-1 rounded-full bg-outline-variant/30" />
-                      <Text className="text-[10px] font-bold text-primary uppercase tracking-tighter">
-                         {item.type.split('/').pop()}
-                      </Text>
-                   </View>
+                  <Text className="text-sm font-bold text-on-surface mb-0.5" numberOfLines={1}>{item.name}</Text>
+                  <View className="flex-row items-center gap-2">
+                    <Text className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-tighter">
+                      {item.location}
+                    </Text>
+                    <View className="w-1 h-1 rounded-full bg-outline-variant/30" />
+                    <Text className="text-[10px] font-bold text-primary uppercase tracking-tighter">
+                      {item.type.split('/').pop()}
+                    </Text>
+                  </View>
                 </View>
 
                 <View className="flex-row items-center gap-2">
-                  <TouchableOpacity 
-                    onPress={() => handleDeletePress(item)} 
+                  <TouchableOpacity
+                    onPress={() => handleDeletePress(item)}
                     className="p-2 rounded-md bg-error-container/20 active:bg-error-container/40"
                     disabled={deleteMutation.isPending}
                   >
@@ -181,7 +183,7 @@ export const ResourceListScreen = () => {
           ListEmptyComponent={
             <View className="py-20 items-center justify-center">
               <View className="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center mb-4">
-                 <Layers size={24} color="#564334" opacity={0.2} />
+                <Layers size={24} color="#564334" opacity={0.2} />
               </View>
               <Text className="text-xs font-bold text-on-surface-variant uppercase tracking-widest text-center opacity-40">
                 No Kinetic nodes detected in current scope
@@ -192,7 +194,7 @@ export const ResourceListScreen = () => {
       )}
 
       {/* FAB */}
-      <TouchableOpacity 
+      <TouchableOpacity
         onPress={handleAdd}
         className="absolute bottom-6 right-6 w-16 h-16 rounded-full bg-primary items-center justify-center shadow-xl shadow-orange-900/40 active:scale-95 transition-all"
       >

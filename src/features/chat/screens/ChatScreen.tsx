@@ -12,7 +12,9 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuthStore } from '../../../store/useAuthStore';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+
+
 import { ChatMessage, ConversationContext } from '../types/chat.types';
 import { parseIntent } from '../services/chatIntentParser';
 import { executeIntent, continueCreation } from '../services/chatAzureExecutor';
@@ -178,9 +180,10 @@ function TypingIndicator() {
 }
 
 // ── Main Screen ────────────────────────────────────────────────────────
-export const ChatScreen = () => {
-  const router = useRouter();
+export const ChatScreen = ({ navigation }: { navigation: any }) => {
   const { user, accessToken, logout } = useAuthStore();
+
+
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -216,8 +219,12 @@ export const ChatScreen = () => {
 
   const handleLogout = async () => {
     await logout();
-    router.replace('/'); // Redirect to login
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    });
   };
+
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
@@ -281,13 +288,13 @@ export const ChatScreen = () => {
       {/* Top AppBar */}
       <View className="flex-row items-center justify-between px-6 pt-14 pb-4 bg-surface-container-lowest shadow-sm border-b border-outline-variant/10 z-50">
         {/* Left: Logo */}
-        <View className="flex-row items-center">
-           <Image 
-             source={require('../../../assets/images/logo.svg')} 
-             style={{ width: 120, height: 28 }} 
-             resizeMode="contain" 
-           />
+        <View className="flex-row items-center gap-1.5">
+           <View className="w-5 h-5 rounded-sm bg-primary items-center justify-center">
+              <Zap size={12} color="white" />
+           </View>
+           <Text className="text-sm font-black tracking-[3px] text-on-surface uppercase">Kinetic</Text>
         </View>
+
         
         {/* Right: Avatar & Dropdown */}
         <View className="flex-row items-center gap-4 relative">
